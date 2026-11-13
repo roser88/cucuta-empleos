@@ -59,7 +59,7 @@ async function loadJobs() {
     list.innerHTML = `<div class="empty">La página ya está lista visualmente. Para cargar y guardar vacantes reales, configura Supabase siguiendo el archivo <b>README.md</b> y ejecuta <b>supabase/schema.sql</b>.</div>`;
     $("jobsCount").textContent = "0"; $("companiesCount").textContent = "0"; return;
   }
-  const { data, error } = await db.from("jobs").select("id,title,company_name,city,area,contract_type,work_mode,description,salary,created_at,profiles(full_name)").eq("status","published").order("created_at",{ascending:false});
+  const { data, error } = await db.from("jobs").select("id,title,company_name,is_confidential,city,area,contract_type,work_mode,description,salary,contact_email,created_at").eq("status","published").order("created_at",{ascending:false});
   if (error) { console.error(error); list.innerHTML = `<div class="empty">No fue posible cargar las vacantes. Verifica las políticas y la configuración de Supabase.</div>`; return; }
   jobsCache = data || [];
   $("jobsCount").textContent = jobsCache.length;
@@ -76,17 +76,30 @@ function renderJobs() {
     <article class="job-card"><span class="job-area">${escapeHTML(j.area || "Oportunidad")}</span><h3>${escapeHTML(j.title)}</h3><div class="job-company">${escapeHTML(j.is_confidential ? "Empresa confidencial" : j.company_name)}</div>
     <div class="job-meta"><span>⌖ ${escapeHTML(j.city)}</span><span>◷ ${escapeHTML(j.work_mode || "Presencial")}</span><span>▣ ${escapeHTML(j.contract_type || "Por definir")}</span></div>
     <p class="job-desc">${escapeHTML((j.description || "").slice(0,145))}${(j.description||"").length>145?"…":""}</p>
-    <div class="job-footer"><small>${j.salary ? escapeHTML(j.salary) : "Salario a convenir"}</small><button class="btn apply-btn" data-apply="${j.id}">Postularme</button></div></article>`).join("") : `<div class="empty">No encontramos vacantes con esos filtros. Intenta otra búsqueda.</div>`;
+    <div class="job-footer"><small>${j.salary ? escapeHTML(j.salary) : "Salario a convenir"}</small><button class="btn apply-btn" data-details="${j.id}">Ver detalles</button><button class="btn apply-btn" data-apply="${j.id}">Postularme</button></div></article>`).join("") : `<div class="empty">No encontramos vacantes con esos filtros. Intenta otra búsqueda.</div>`;
 }
 function escapeHTML(value="") { return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
+let pendingJobId = null;
 async function submitApplication(jobId) {
-  if (!currentUser) { authDialog("login"); toast("Inicia sesión como candidato para postularte."); return; }
-  if (profile?.role !== "candidate") { toast("Solo las cuentas de candidato pueden postularse."); return; }
-  const { error } = await db.from("applications").insert({job_id:jobId,candidate_id:currentUser.id,status:"submitted"});
-  if (error) { toast(error.code==="23505" ? "Ya te postulaste a esta vacante." : `No se pudo enviar la postulación: ${error.message}`); return; }
-  toast("¡Postulación enviada! Puedes consultar su estado en tu panel.");
-  loadDashboard();
+ if(!currentUser){authDialog("login");toast("Inicia sesión como candidato para postularte.");return;}
+ if(profile?.role!=="candidate"){toast("Solo las cuentas de candidato pueden postularse.");return;}
+ pendingJobId=jobId;$("coverLetter").value="";$("applicationMessage").textContent="";showModal("applicationModal");
+}
+async function saveApplication(e){
+ e.preventDefault();if(!pendingJobId||!currentUser||profile?.role!=="candidate")return;
+ const b=$("applicationSubmit");b.disabled=true;b.textContent="Enviando...";
+ const {error}=await db.from("applications").insert({job_id:pendingJobId,candidate_id:currentUser.id,status:"submitted",cover_letter:$("coverLetter").value.trim()||null});
+ b.disabled=false;b.textContent="Enviar postulación";
+ if(error){$("applicationMessage").textContent=error.code==="23505"?"Ya te postulaste a esta vacante.":error.message;return;}
+ hideModals();pendingJobId=null;toast("¡Postulación enviada!");await loadDashboard();await loadJobs();
+}
+function showJobDetails(id){
+ const j=jobsCache.find(x=>x.id===id);if(!j)return;
+ $("detailTitle").textContent=j.title;$("detailCompany").textContent=j.is_confidential?"Empresa confidencial":j.company_name;
+ $("detailMeta").textContent=[j.city,j.area,j.contract_type,j.work_mode].filter(Boolean).join(" · ");
+ $("detailDescription").textContent=j.description||"Sin descripción.";$("detailSalary").textContent=j.salary||"Salario a convenir";
+ $("detailApply").dataset.apply=id;showModal("jobDetailsModal");
 }
 async function loadDashboardBase() {
   const dash = $("dashboard");
@@ -200,6 +213,7 @@ $("authForm").addEventListener("submit",async e=>{
   }
 });
 $("switchAuth").addEventListener("click",()=>authDialog(authMode==="login"?"signup":"login"));
+$("forgotPassword")?.addEventListener("click",async()=>{const email=$("authEmail").value.trim();if(!email){$("authMessage").textContent="Escribe primero tu correo electrónico.";return;}const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});$("authMessage").textContent=error?error.message:"Si el correo está registrado, recibirás instrucciones para restablecer la contraseña.";});
 $("accountRole").addEventListener("change",()=> $("companyField").classList.toggle("hidden",$("accountRole").value!=="employer"));
 $("jobForm").addEventListener("submit",async e=>{
   e.preventDefault();if(!db||!currentUser||!profile){$("jobMessage").textContent="Inicia sesión con tu cuenta de empresa.";return;}
@@ -208,7 +222,9 @@ $("jobForm").addEventListener("submit",async e=>{
   if(error){$("jobMessage").textContent=error.message;return;}
   $("jobForm").reset();hideModals();toast("Vacante publicada correctamente.");loadJobs();loadDashboard();location.hash="#vacantes";
 });
-$("jobsList").addEventListener("click",e=>{const b=e.target.closest("[data-apply]");if(b)submitApplication(b.dataset.apply);});
+$("jobsList").addEventListener("click",e=>{const d=e.target.closest("[data-details]");if(d){showJobDetails(d.dataset.details);return;}const b=e.target.closest("[data-apply]");if(b)submitApplication(b.dataset.apply);});
+$("detailApply").addEventListener("click",()=>{const id=$("detailApply").dataset.apply;hideModals();submitApplication(id);});
+$("applicationForm").addEventListener("submit",saveApplication);
 $("loginBtn").addEventListener("click",()=>authDialog("login"));
 $("registerBtn").addEventListener("click",()=>authDialog("signup"));
 $("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();loadDashboard();toast("Sesión cerrada.");});
