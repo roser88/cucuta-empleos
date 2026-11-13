@@ -14,6 +14,11 @@ create table if not exists public.profiles (
   professional_title text,
   bio text,
   cv_url text,
+  cv_storage_path text,
+  skills text,
+  education text,
+  experience text,
+  linkedin_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -30,6 +35,7 @@ create table if not exists public.jobs (
   description text not null,
   salary text,
   contact_email text,
+  is_confidential boolean not null default false,
   status text not null default 'published' check (status in ('draft','published','paused','closed')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -39,20 +45,23 @@ create table if not exists public.applications (
   id uuid primary key default gen_random_uuid(),
   job_id uuid not null references public.jobs(id) on delete cascade,
   candidate_id uuid not null references public.profiles(id) on delete cascade,
-  status text not null default 'submitted' check (status in ('submitted','reviewing','interview','hired','rejected')),
+  status text not null default 'submitted' check (status in ('submitted','reviewing','interview','contactable','kept_in_file','hired','rejected')),
   cover_letter text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  cv_viewed_at timestamptz,
+  employer_note text,
   unique(job_id,candidate_id)
 );
 
+create index if not exists jobs_employer_idx on public.jobs(employer_id, created_at desc);
 create index if not exists jobs_status_created_idx on public.jobs(status, created_at desc);
 create index if not exists jobs_city_area_idx on public.jobs(city, area);
 create index if not exists applications_candidate_idx on public.applications(candidate_id, created_at desc);
 create index if not exists applications_job_idx on public.applications(job_id, created_at desc);
 
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public
+returns trigger language plpgsql security definer set search_path = ''
 as $$
 begin
   insert into public.profiles(id, full_name, email, role, company_name)
@@ -72,8 +81,8 @@ create trigger on_auth_user_created after insert on auth.users
 for each row execute procedure public.handle_new_user();
 
 create or replace function public.prevent_profile_role_escalation()
-returns trigger language plpgsql
-as $$
+returns trigger language plpgsql set search_path = ''
+as $
 begin
   if new.role is distinct from old.role then
     raise exception 'El rol de usuario no puede modificarse desde el perfil.';
@@ -92,7 +101,7 @@ alter table public.jobs enable row level security;
 alter table public.applications enable row level security;
 
 create policy "profiles_select_self_or_employer_public" on public.profiles
-for select to authenticated using (id = auth.uid() or role = 'employer');
+for select to authenticated using (id = (select auth.uid()));
 
 create policy "profiles_insert_self" on public.profiles
 for insert to authenticated with check (id = auth.uid());
@@ -147,3 +156,6 @@ for update to authenticated using (
 ) with check (
   exists (select 1 from public.jobs j where j.id = job_id and j.employer_id = auth.uid())
 );
+
+-- Hoja de vida privada: bucket y políticas de acceso por propietario/postulación.
+insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types) values ('candidate-cvs','candidate-cvs',false,10485760,array['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']) on conflict (id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
