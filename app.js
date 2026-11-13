@@ -21,7 +21,7 @@ function toast(message) {
   setTimeout(() => $("toast").classList.add("hidden"), 4000);
 }
 function showModal(id) { $(id).classList.remove("hidden"); }
-function hideModals() { $("authModal").classList.add("hidden"); $("jobModal").classList.add("hidden"); }
+function hideModals() { document.querySelectorAll(".modal").forEach(modal=>modal.classList.add("hidden")); }
 function authDialog(mode="login", role="candidate") {
   authMode = mode;
   $("authTitle").textContent = mode === "login" ? "Iniciar sesión" : "Crear una cuenta";
@@ -197,11 +197,12 @@ async function loadDashboard() {
         (p.cv_storage_path?'<p><button class="btn btn-outline">Ver hoja de vida</button></p>':"<p class='hint'>Sin hoja de vida cargada.</p>");
       const button=item.querySelector("button");
       if(button)button.addEventListener("click",async()=>{
+        const win=window.open("about:blank","_blank");if(!win){toast("Permite las ventanas emergentes para abrir la hoja de vida.");return;}
         const {data,error}=await db.storage.from("candidate-cvs").createSignedUrl(p.cv_storage_path,60);
-        if(error){toast(error.message);return;}
+        if(error){win.close();toast(error.message);return;}
         const {error:mark}=await db.from("applications").update({cv_viewed_at:new Date().toISOString()}).eq("id",a.id);
-        if(mark){toast(mark.message);return;}
-        window.open(data.signedUrl,"_blank","noopener");toast("Visualización registrada.");
+        if(mark){win.close();toast(mark.message);return;}
+        win.location.href=data.signedUrl;toast("Visualización registrada.");
       });
       panel.appendChild(item);
     });
