@@ -203,7 +203,7 @@ $("switchAuth").addEventListener("click",()=>authDialog(authMode==="login"?"sign
 $("accountRole").addEventListener("change",()=> $("companyField").classList.toggle("hidden",$("accountRole").value!=="employer"));
 $("jobForm").addEventListener("submit",async e=>{
   e.preventDefault();if(!db||!currentUser||!profile){$("jobMessage").textContent="Inicia sesión con tu cuenta de empresa.";return;}
-  const payload={employer_id:currentUser.id,title:$("jobTitle").value.trim(),company_name:$("jobCompany").value.trim(),city:$("jobCity").value,area:$("jobArea").value,contract_type:$("jobContract").value,work_mode:$("jobMode").value,description:$("jobDescription").value.trim(),salary:$("jobSalary").value.trim()||null,contact_email:$("jobContact").value.trim()||null,status:"published"};
+  const payload={employer_id:currentUser.id,title:$("jobTitle").value.trim(),company_name:$("jobConfidential").checked?"Empresa confidencial":$("jobCompany").value.trim(),is_confidential:$("jobConfidential").checked,city:$("jobCity").value,area:$("jobArea").value,contract_type:$("jobContract").value,work_mode:$("jobMode").value,description:$("jobDescription").value.trim(),salary:$("jobSalary").value.trim()||null,contact_email:$("jobContact").value.trim()||null,status:"published"};
   const {error}=await db.from("jobs").insert(payload);
   if(error){$("jobMessage").textContent=error.message;return;}
   $("jobForm").reset();hideModals();toast("Vacante publicada correctamente.");loadJobs();loadDashboard();location.hash="#vacantes";
