@@ -92,7 +92,7 @@ async function saveApplication(e){
  const {error}=await db.from("applications").insert({job_id:pendingJobId,candidate_id:currentUser.id,status:"submitted",cover_letter:$("coverLetter").value.trim()||null});
  b.disabled=false;b.textContent="Enviar postulación";
  if(error){$("applicationMessage").textContent=error.code==="23505"?"Ya te postulaste a esta vacante.":error.message;return;}
- hideModals();pendingJobId=null;toast("¡Postulación enviada!");await loadDashboard();await loadJobs();
+ hideModals();pendingJobId=null;toast("¡Postulación enviada!");location.href="dashboard.html";
 }
 function showJobDetails(id){
  const j=jobsCache.find(x=>x.id===id);if(!j)return;
@@ -217,7 +217,7 @@ $("authForm").addEventListener("submit",async e=>{
   if(authMode==="login"){
     const {data,error}=await db.auth.signInWithPassword({email,password});
     if(error){$("authMessage").textContent=error.message;return;}
-    currentUser=data.user; await loadProfile(); hideModals(); updateAuthUI(); await loadDashboard(); toast("Sesión iniciada correctamente."); location.hash="#panel"; window.scrollTo({top:0,behavior:"smooth"});
+    currentUser=data.user; await loadProfile(); hideModals(); updateAuthUI(); toast("Sesión iniciada correctamente."); location.href="dashboard.html";
   } else {
     const role=$("accountRole").value,fullName=$("fullName").value.trim();
     const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim()}}});
@@ -257,7 +257,7 @@ $("year").textContent=new Date().getFullYear();
 async function init(){
   if(!db){updateAuthUI();await loadJobs();loadDashboard();return;}
   const {data:{session}}=await db.auth.getSession();
-  currentUser=session?.user||null;await loadProfile();updateAuthUI();await loadJobs();await loadDashboard();if(currentUser){location.hash="#panel";}
+  currentUser=session?.user||null;if(currentUser){location.replace("dashboard.html");return;}await loadProfile();updateAuthUI();await loadJobs();await loadDashboard();
   db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;await loadProfile();updateAuthUI();loadDashboard();});
 }
 init();
