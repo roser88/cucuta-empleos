@@ -9,3 +9,4 @@
 
 /* Tipografía global unificada */
 :root{font-family:'Noto Sans',sans-serif}html,body,button,input,select,textarea{font-family:'Noto Sans',sans-serif!important;font-style:normal!important}em,i{font-style:normal!important}h1,h2,h3,h4,h5,h6{font-family:'Noto Sans',sans-serif!important;font-style:normal!important;font-weight:800}#logoutBtn{background:#fff0f1!important;border:1px solid #efb8be!important;color:#b42332!important;border-radius:10px!important;padding:11px 15px!important;font:700 13px 'Noto Sans',sans-serif!important;box-shadow:0 2px 7px #b4233218}#logoutBtn:hover{background:#b42332!important;color:#fff!important;box-shadow:0 7px 18px #b4233230;transform:translateY(-1px)}#profileBtn{border-radius:10px;font-weight:700}
+*{font-style:normal!important}
