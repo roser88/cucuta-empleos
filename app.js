@@ -84,7 +84,7 @@ let pendingJobId = null;
 async function submitApplication(jobId) {
  if(!currentUser){authDialog("login");toast("Inicia sesión como candidato para postularte.");return;}
  if(profile?.role!=="candidate"){toast("Solo las cuentas de candidato pueden postularse.");return;}
- pendingJobId=jobId;$("coverLetter").value="";$("applicationMessage").textContent="";showModal("applicationModal");
+ if(!profile?.cv_storage_path){toast("Antes de postularte, carga tu hoja de vida en Mi perfil.");location.hash="#panel";await loadDashboard();return;} pendingJobId=jobId;$("coverLetter").value="";$("applicationMessage").textContent="Tu hoja de vida cargada se adjuntará automáticamente a esta postulación.";showModal("applicationModal");
 }
 async function saveApplication(e){
  e.preventDefault();if(!pendingJobId||!currentUser||profile?.role!=="candidate")return;
@@ -217,7 +217,7 @@ $("authForm").addEventListener("submit",async e=>{
   if(authMode==="login"){
     const {data,error}=await db.auth.signInWithPassword({email,password});
     if(error){$("authMessage").textContent=error.message;return;}
-    currentUser=data.user; await loadProfile(); hideModals(); updateAuthUI(); loadDashboard(); toast("Sesión iniciada correctamente.");
+    currentUser=data.user; await loadProfile(); hideModals(); updateAuthUI(); await loadDashboard(); toast("Sesión iniciada correctamente."); location.hash="#panel"; window.scrollTo({top:0,behavior:"smooth"});
   } else {
     const role=$("accountRole").value,fullName=$("fullName").value.trim();
     const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim()}}});
@@ -241,7 +241,7 @@ $("detailApply").addEventListener("click",()=>{const id=$("detailApply").dataset
 $("applicationForm").addEventListener("submit",saveApplication);
 $("loginBtn").addEventListener("click",()=>authDialog("login"));
 $("registerBtn").addEventListener("click",()=>authDialog("signup"));
-$("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();loadDashboard();toast("Sesión cerrada.");});
+$("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();await loadDashboard();toast("Has cerrado sesión. Regresando al inicio...");window.scrollTo({top:0,behavior:"smooth"});setTimeout(()=>{location.href="index.html#inicio";},3000);});
 $("heroPublish").addEventListener("click",openPublish);
 document.querySelectorAll("[data-register-role]").forEach(b=>b.addEventListener("click",()=>authDialog("signup",b.dataset.registerRole)));
 $("reloadJobs").addEventListener("click",loadJobs);
@@ -257,7 +257,7 @@ $("year").textContent=new Date().getFullYear();
 async function init(){
   if(!db){updateAuthUI();await loadJobs();loadDashboard();return;}
   const {data:{session}}=await db.auth.getSession();
-  currentUser=session?.user||null;await loadProfile();updateAuthUI();await loadJobs();await loadDashboard();
+  currentUser=session?.user||null;await loadProfile();updateAuthUI();await loadJobs();await loadDashboard();if(currentUser){location.hash="#panel";}
   db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;await loadProfile();updateAuthUI();loadDashboard();});
 }
 init();
