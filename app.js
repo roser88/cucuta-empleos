@@ -4,8 +4,8 @@
  * 2) Copia Project URL y anon/public key desde Project Settings > API.
  * 3) Pégalos abajo. La anon key es pública; NUNCA pongas service_role key aquí.
  */
-const SUPABASE_URL = "PEGA_AQUI_TU_SUPABASE_PROJECT_URL";
-const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_SUPABASE_ANON_PUBLIC_KEY";
+const SUPABASE_URL = "https://azlfifojrhzvezcsyogg.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ZzYqXmSxef6YTilUe5Pk0w_2ODNM8eq";
 const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("PEGA_AQUI") && !SUPABASE_ANON_KEY.includes("PEGA_AQUI");
 const db = configured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
