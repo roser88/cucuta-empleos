@@ -184,3 +184,55 @@ using (bucket_id='candidate-cvs' and (
     where a.candidate_id::text=(storage.foldername(name))[1] and j.employer_id=(select auth.uid())
   )
 ));
+
+-- Notificaciones internas para empresas y candidatos.
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  message text not null,
+  related_job_id uuid references public.jobs(id) on delete set null,
+  related_application_id uuid references public.applications(id) on delete set null,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists notifications_user_created_idx on public.notifications(user_id,created_at desc);
+alter table public.notifications enable row level security;
+drop policy if exists notifications_read_own on public.notifications;
+create policy notifications_read_own on public.notifications for select to authenticated using (user_id=(select auth.uid()));
+drop policy if exists notifications_update_own on public.notifications;
+create policy notifications_update_own on public.notifications for update to authenticated using (user_id=(select auth.uid())) with check (user_id=(select auth.uid()));
+
+create or replace function public.notify_job_application()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+declare employer uuid; job_title text;
+begin
+ select j.employer_id,j.title into employer,job_title from public.jobs j where j.id=new.job_id;
+ if employer is not null then
+  insert into public.notifications(user_id,title,message,related_job_id,related_application_id)
+  values(employer,'Nueva postulación','Una persona se postuló a: '||coalesce(job_title,'tu vacante'),new.job_id,new.id);
+ end if;
+ return new;
+end;
+$$;
+drop trigger if exists notify_employer_new_application on public.applications;
+create trigger notify_employer_new_application after insert on public.applications for each row execute procedure public.notify_job_application();
+revoke all on function public.notify_job_application() from public,anon,authenticated;
+
+create or replace function public.notify_candidate_application_status()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+declare job_title text;
+begin
+ if new.status is distinct from old.status then
+  select j.title into job_title from public.jobs j where j.id=new.job_id;
+  insert into public.notifications(user_id,title,message,related_job_id,related_application_id)
+  values(new.candidate_id,'Actualización de postulación','Tu postulación a "'||coalesce(job_title,'una vacante')||'" cambió a: '||new.status,new.job_id,new.id);
+ end if;
+ return new;
+end;
+$$;
+drop trigger if exists notify_candidate_status_change on public.applications;
+create trigger notify_candidate_status_change after update of status on public.applications for each row execute procedure public.notify_candidate_application_status();
+revoke all on function public.notify_candidate_application_status() from public,anon,authenticated;
