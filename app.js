@@ -73,7 +73,7 @@ function renderJobs() {
   const area = $("filterArea").value;
   const filtered = jobsCache.filter(j => (!city || j.city===city) && (!area || j.area===area) && (!term || `${j.title} ${j.company_name} ${j.description}`.toLowerCase().includes(term)));
   $("jobsList").innerHTML = filtered.length ? filtered.map(j => `
-    <article class="job-card"><span class="job-area">${escapeHTML(j.area || "Oportunidad")}</span><h3>${escapeHTML(j.title)}</h3><div class="job-company">${escapeHTML(j.company_name)}</div>
+    <article class="job-card"><span class="job-area">${escapeHTML(j.area || "Oportunidad")}</span><h3>${escapeHTML(j.title)}</h3><div class="job-company">${escapeHTML(j.is_confidential ? "Empresa confidencial" : j.company_name)}</div>
     <div class="job-meta"><span>⌖ ${escapeHTML(j.city)}</span><span>◷ ${escapeHTML(j.work_mode || "Presencial")}</span><span>▣ ${escapeHTML(j.contract_type || "Por definir")}</span></div>
     <p class="job-desc">${escapeHTML((j.description || "").slice(0,145))}${(j.description||"").length>145?"…":""}</p>
     <div class="job-footer"><small>${j.salary ? escapeHTML(j.salary) : "Salario a convenir"}</small><button class="btn apply-btn" data-apply="${j.id}">Postularme</button></div></article>`).join("") : `<div class="empty">No encontramos vacantes con esos filtros. Intenta otra búsqueda.</div>`;
@@ -88,7 +88,7 @@ async function submitApplication(jobId) {
   toast("¡Postulación enviada! Puedes consultar su estado en tu panel.");
   loadDashboard();
 }
-async function loadDashboard() {
+async function loadDashboardBase() {
   const dash = $("dashboard");
   if (!currentUser || !db) { dash.innerHTML = `<div class="empty">${!db?"Configura Supabase para habilitar las cuentas.":"Inicia sesión para ver tu panel personal."}</div>`; return; }
   await loadProfile();
@@ -103,16 +103,84 @@ async function loadDashboard() {
     const jobIds=(jobs||[]).map(j=>j.id);
     let apps=[];
     if(jobIds.length){const result=await db.from("applications").select("id,status,created_at,candidate_id,jobs(title),profiles:profiles!applications_candidate_id_fkey(full_name,email)").in("job_id",jobIds).order("created_at",{ascending:false});if(!result.error)apps=result.data||[];}
-    dash.innerHTML = `<div class="dashboard-grid"><div class="dash-panel"><h3>Mis vacantes</h3><button class="btn" id="dashPublish">Publicar vacante</button>${(jobs||[]).map(j=>`<div class="dash-item"><b>${escapeHTML(j.title)}</b><br><span class="status">${escapeHTML(j.status)}</span></div>`).join("")||"<p class='hint'>Todavía no has publicado vacantes.</p>"}</div><div class="dash-panel"><h3>Postulaciones recibidas</h3>${apps.map(a=>`<div class="dash-item"><b>${escapeHTML(a.profiles?.full_name||"Candidato")}</b><br><small>${escapeHTML(a.jobs?.title||"Vacante")}</small><br><span class="status">${statusLabel(a.status)}</span><br><select data-status="${a.id}"><option value="submitted" ${a.status==="submitted"?"selected":""}>Recibida</option><option value="reviewing" ${a.status==="reviewing"?"selected":""}>En revisión</option><option value="interview" ${a.status==="interview"?"selected":""}>Entrevista</option><option value="hired" ${a.status==="hired"?"selected":""}>Contratado</option><option value="rejected" ${a.status==="rejected"?"selected":""}>No seleccionado</option></select></div>`).join("")||"<p class='hint'>Aún no hay postulaciones.</p>"}</div></div>`;
+    dash.innerHTML = `<div class="dashboard-grid"><div class="dash-panel"><h3>Mis vacantes</h3><button class="btn" id="dashPublish">Publicar vacante</button>${(jobs||[]).map(j=>`<div class="dash-item"><b>${escapeHTML(j.title)}</b><br><span class="status">${escapeHTML(j.status)}</span></div>`).join("")||"<p class='hint'>Todavía no has publicado vacantes.</p>"}</div><div class="dash-panel"><h3>Postulaciones recibidas</h3>${apps.map(a=>`<div class="dash-item"><b>${escapeHTML(a.profiles?.full_name||"Candidato")}</b><br><small>${escapeHTML(a.jobs?.title||"Vacante")}</small><br><span class="status">${statusLabel(a.status)}</span><br><select data-status="${a.id}"><option value="submitted" ${a.status==="submitted"?"selected":""}>Recibida</option><option value="reviewing" ${a.status==="reviewing"?"selected":""}>En revisión</option><option value="interview" ${a.status==="interview"?"selected":""}>Entrevista</option><option value="hired" ${a.status==="hired"?"selected":""}>Contratado</option><option value="contactable" ${a.status==="contactable"?"selected":""}>Puede ser contactado</option><option value="kept_in_file" ${a.status==="kept_in_file"?"selected":""}>Hoja de vida en base de datos</option><option value="rejected" ${a.status==="rejected"?"selected":""}>No seleccionado</option></select></div>`).join("")||"<p class='hint'>Aún no hay postulaciones.</p>"}</div></div>`;
     $("dashPublish")?.addEventListener("click",openPublish);
     dash.querySelectorAll("[data-status]").forEach(sel=>sel.addEventListener("change",()=>updateApplicationStatus(sel.dataset.status,sel.value)));
   }
 }
-function statusLabel(status){return ({submitted:"Postulación recibida",reviewing:"En revisión",interview:"Entrevista",hired:"Contratado",rejected:"No seleccionado"})[status]||status;}
+function statusLabel(status){return ({submitted:"Postulación recibida",reviewing:"En revisión",interview:"Entrevista",contactable:"Puede ser contactado en cualquier momento",kept_in_file:"Hoja de vida conservada para futuras oportunidades",hired:"Contratado",rejected:"No seleccionado"})[status]||status;}
 async function updateApplicationStatus(id,status){
   const {error}=await db.from("applications").update({status}).eq("id",id);
   if(error){toast("No se pudo actualizar el estado.");return;}
   toast("Estado de postulación actualizado.");loadDashboard();
+}
+
+
+async function loadDashboard() {
+  await loadDashboardBase();
+  if (!currentUser || !profile || !db) return;
+  const dash=$("dashboard");
+  if(profile.role==="candidate"){
+    const panel=document.createElement("div");panel.className="dash-panel";
+    panel.innerHTML='<h3>Mi perfil profesional</h3><form id="profileForm" class="profile-grid">'+
+      '<label>Nombre completo<input name="full_name" required value="'+escapeHTML(profile.full_name||"")+'"></label>'+
+      '<label>Teléfono<input name="phone" value="'+escapeHTML(profile.phone||"")+'"></label>'+
+      '<label>Ciudad<input name="city" value="'+escapeHTML(profile.city||"Cúcuta")+'"></label>'+
+      '<label>Profesión o cargo<input name="professional_title" value="'+escapeHTML(profile.professional_title||"")+'"></label>'+
+      '<label class="wide">Resumen profesional<textarea name="bio">'+escapeHTML(profile.bio||"")+'</textarea></label>'+
+      '<label class="wide">Habilidades<input name="skills" value="'+escapeHTML(profile.skills||"")+'"></label>'+
+      '<label class="wide">Formación académica<textarea name="education">'+escapeHTML(profile.education||"")+'</textarea></label>'+
+      '<label class="wide">Experiencia laboral<textarea name="experience">'+escapeHTML(profile.experience||"")+'</textarea></label>'+
+      '<label class="wide">LinkedIn<input name="linkedin_url" type="url" value="'+escapeHTML(profile.linkedin_url||"")+'"></label>'+
+      '<button class="btn wide" type="submit">Guardar perfil</button><p id="profileMsg" class="form-message wide"></p></form>'+
+      '<hr><h3>Hoja de vida</h3><p class="hint">PDF, DOC o DOCX · máximo 10 MB. Archivo privado para ti y las empresas a las que te postules.</p>'+
+      '<form id="cvForm"><input id="cvFile" type="file" accept=".pdf,.doc,.docx" required><button class="btn" type="submit">Subir hoja de vida</button><p id="cvMsg" class="form-message"></p></form>'+
+      '<p class="hint">'+(profile.cv_storage_path?"Tienes una hoja de vida cargada.":"Aún no has cargado tu hoja de vida.")+'</p>';
+    dash.appendChild(panel);
+    $("profileForm").addEventListener("submit",async e=>{
+      e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget).entries());data.updated_at=new Date().toISOString();
+      const {error}=await db.from("profiles").update(data).eq("id",currentUser.id);
+      $("profileMsg").textContent=error?error.message:"Perfil actualizado.";if(!error){await loadProfile();toast("Perfil guardado.");}
+    });
+    $("cvForm").addEventListener("submit",async e=>{
+      e.preventDefault();const f=$("cvFile").files[0];if(!f)return;
+      const allowed=["application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+      if(!allowed.includes(f.type)||f.size>10*1024*1024){$("cvMsg").textContent="Selecciona PDF, DOC o DOCX de máximo 10 MB.";return;}
+      const path=currentUser.id+"/"+Date.now()+"."+f.name.split(".").pop().toLowerCase();
+      $("cvMsg").textContent="Subiendo...";
+      const {error:up}=await db.storage.from("candidate-cvs").upload(path,f,{upsert:true,contentType:f.type});
+      if(up){$("cvMsg").textContent=up.message;return;}
+      const {error}=await db.from("profiles").update({cv_storage_path:path,cv_url:null}).eq("id",currentUser.id);
+      $("cvMsg").textContent=error?error.message:"Hoja de vida cargada correctamente.";
+      if(!error){await loadProfile();toast("Hoja de vida guardada.");}
+    });
+  } else {
+    const {data:jobs}=await db.from("jobs").select("id").eq("employer_id",currentUser.id);
+    const ids=(jobs||[]).map(j=>j.id);if(!ids.length)return;
+    const {data:apps,error}=await db.from("applications").select("id,status,cv_viewed_at,profiles:profiles!applications_candidate_id_fkey(full_name,email,phone,city,professional_title,bio,skills,education,experience,linkedin_url,cv_storage_path),jobs(title)").in("job_id",ids);
+    if(error){console.error(error);return;}
+    const panel=document.createElement("div");panel.className="dash-panel";panel.innerHTML="<h3>Perfiles de candidatos y hojas de vida</h3>";
+    (apps||[]).forEach(a=>{
+      const item=document.createElement("div");item.className="dash-item";
+      const p=a.profiles||{};
+      item.innerHTML="<b>"+escapeHTML(p.full_name||"Candidato")+"</b><br>"+escapeHTML(a.jobs?.title||"Vacante")+
+        "<p>"+escapeHTML(p.professional_title||"")+" · "+escapeHTML(p.city||"")+"</p><p>"+escapeHTML(p.bio||"")+"</p>"+
+        "<p><b>Habilidades:</b> "+escapeHTML(p.skills||"No registradas")+"</p><p><b>Formación:</b> "+escapeHTML(p.education||"No registrada")+"</p>"+
+        "<p><b>Experiencia:</b> "+escapeHTML(p.experience||"No registrada")+"</p>"+
+        (p.linkedin_url?'<a href="'+escapeHTML(p.linkedin_url)+'" target="_blank" rel="noopener">LinkedIn</a>':"")+
+        (p.cv_storage_path?'<p><button class="btn btn-outline">Ver hoja de vida</button></p>':"<p class='hint'>Sin hoja de vida cargada.</p>");
+      const button=item.querySelector("button");
+      if(button)button.addEventListener("click",async()=>{
+        const {data,error}=await db.storage.from("candidate-cvs").createSignedUrl(p.cv_storage_path,60);
+        if(error){toast(error.message);return;}
+        const {error:mark}=await db.from("applications").update({cv_viewed_at:new Date().toISOString()}).eq("id",a.id);
+        if(mark){toast(mark.message);return;}
+        window.open(data.signedUrl,"_blank","noopener");toast("Visualización registrada.");
+      });
+      panel.appendChild(item);
+    });
+    dash.appendChild(panel);
+  }
 }
 
 $("authForm").addEventListener("submit",async e=>{
