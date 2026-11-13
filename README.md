@@ -7,16 +7,22 @@
 **Universidad:** UNAD — Universidad Nacional Abierta y a Distancia  
 **Proyecto de Grado:** 202016907A_2204
 
-## Qué incluye esta versión
-- Sitio responsive para celular, tableta y computador.
-- Búsqueda y filtros de vacantes.
-- Registro e inicio de sesión con Supabase Auth.
-- Roles de candidato y empresa.
-- Publicación de vacantes desde cuentas de empresa.
-- Postulación de candidatos a vacantes.
-- Panel de candidato para consultar el estado de sus postulaciones.
-- Panel de empresa para revisar postulaciones y actualizar estados: recibida, en revisión, entrevista, contratado o no seleccionado.
-- Esquema SQL con tablas, índices, trigger de perfil y Row Level Security.
+## Funciones incluidas en la versión actual
+- Interfaz adaptable a computador, tableta y celular.
+- Búsqueda de vacantes por palabra clave, ciudad y área.
+- Vista de detalles de cada vacante.
+- Registro e inicio de sesión de candidatos y empresas con Supabase Auth.
+- Perfil profesional editable del candidato: contacto, ciudad, profesión, resumen, habilidades, formación, experiencia y LinkedIn.
+- Carga de hoja de vida PDF, DOC o DOCX de máximo 10 MB en almacenamiento privado.
+- Postulación a una vacante con mensaje de presentación opcional.
+- Panel del candidato para consultar postulaciones y la fecha de visualización de su hoja de vida.
+- Panel de empresa para consultar perfiles y hojas de vida de personas postuladas.
+- Gestión de vacantes propias: publicar, pausar o cerrar.
+- Seguimiento de candidaturas: recibida, en revisión, entrevista, puede ser contactado, hoja de vida conservada, contratado o no seleccionado.
+- Vacantes con nombre de empresa confidencial.
+- Notificaciones internas cuando una persona se postula y cuando cambia el estado de una candidatura.
+- Recuperación de contraseña por correo (requiere configurar redirecciones y correo en Supabase).
+- Base de datos relacional con políticas RLS y permisos de almacenamiento privado.
 
 ## Importante: activar la base de datos
 El sitio no queda conectado a una base de datos hasta crear y configurar tu proyecto Supabase.
@@ -61,7 +67,8 @@ Esta es una base funcional inicial para un proyecto académico, no una plataform
 - Registra la fecha en que una empresa abre la hoja de vida y permite mostrarla al candidato.
 - Incluye etapas adicionales de selección: puede ser contactado y hoja de vida conservada para futuras oportunidades.
 - Permite publicar vacantes con identidad de empresa confidencial.
-- No incluye mensajería interna.
-- No incluye verificación documental de empresas ni panel de superadministrador.
+- No incluye chat interno entre candidato y empresa ni envío de notificaciones por WhatsApp/SMS.
+- Las notificaciones actuales son internas dentro del panel; no son correos automáticos.
+- No incluye todavía verificación documental automática de empresas ni un panel administrativo de moderación.
 - El flujo de contratación se representa mediante el estado de la postulación que actualiza la empresa; la contratación legal se realiza por fuera de la plataforma.
 - Los formularios y la autenticación requieren configurar Supabase para operar.
