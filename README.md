@@ -57,7 +57,11 @@ Esta es una base funcional inicial para un proyecto académico, no una plataform
 - Revisa permisos, RLS y pruebas de seguridad con usuarios de prueba.
 
 ## Limitaciones conocidas de esta entrega
-- No incluye aún carga de CV ni mensajería interna.
+- Incluye perfil profesional editable y carga privada de hojas de vida PDF/DOC/DOCX (máximo 10 MB), con acceso limitado al candidato y a empresas que recibieron su postulación.
+- Registra la fecha en que una empresa abre la hoja de vida y permite mostrarla al candidato.
+- Incluye etapas adicionales de selección: puede ser contactado y hoja de vida conservada para futuras oportunidades.
+- Permite publicar vacantes con identidad de empresa confidencial.
+- No incluye mensajería interna.
 - No incluye verificación documental de empresas ni panel de superadministrador.
 - El flujo de contratación se representa mediante el estado de la postulación que actualiza la empresa; la contratación legal se realiza por fuera de la plataforma.
 - Los formularios y la autenticación requieren configurar Supabase para operar.
