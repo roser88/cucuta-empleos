@@ -236,3 +236,19 @@ $$;
 drop trigger if exists notify_candidate_status_change on public.applications;
 create trigger notify_candidate_status_change after update of status on public.applications for each row execute procedure public.notify_candidate_application_status();
 revoke all on function public.notify_candidate_application_status() from public,anon,authenticated;
+
+-- Impide que una empresa cambie el candidato o la vacante de una postulación.
+create or replace function public.prevent_application_identity_change()
+returns trigger language plpgsql set search_path = ''
+as $$
+begin
+  if new.job_id is distinct from old.job_id or new.candidate_id is distinct from old.candidate_id then
+    raise exception 'No se puede cambiar la vacante ni el candidato de una postulación existente.';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists prevent_application_identity_change on public.applications;
+create trigger prevent_application_identity_change before update on public.applications
+for each row execute procedure public.prevent_application_identity_change();
+revoke all on function public.prevent_application_identity_change() from public,anon,authenticated;
