@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cúcuta Empleos conecta candidatos y empresas de Norte de Santander. Busca empleo, publica vacantes y postúlate.">
+  <meta name="theme-color" content="#102b4e">
+  <title>Cúcuta Empleos | Conectamos tu futuro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+<header class="header"><div class="container nav">
+  <a class="brand" href="#inicio"><span class="brand-mark">CE</span><span>CÚCUTA <b>EMPLEOS</b></span></a>
+  <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">☰</button>
+  <nav id="mainNav"><a href="#vacantes">Buscar empleo</a><a href="#empresas">Empresas</a><a href="#como-funciona">Cómo funciona</a><button class="btn btn-outline" id="loginBtn">Iniciar sesión</button><button class="btn" id="registerBtn">Registrarme</button><button class="btn btn-outline hidden" id="logoutBtn">Cerrar sesión</button></nav>
+</div></header>
+<main id="inicio">
+<section class="hero"><div class="container hero-grid"><div>
+  <span class="eyebrow">TALENTO LOCAL · OPORTUNIDADES REALES</span>
+  <h1>Tu próximo empleo<br>está <em>más cerca.</em></h1>
+  <p>Conectamos a las personas y empresas de Cúcuta y Norte de Santander. Encuentra oportunidades, publica vacantes y haz crecer tu futuro.</p>
+  <div class="hero-actions"><a class="btn" href="#vacantes">Explorar empleos <span>→</span></a><button class="btn btn-ghost" id="heroPublish">Publicar una vacante</button></div>
+  <div class="hero-points"><span>✓ Registro gratuito para candidatos</span><span>✓ Oportunidades de la región</span></div>
+</div><div class="hero-art"><div class="art-card"><div class="art-top"><span class="brand-mark">CE</span><span class="live">OPORTUNIDADES</span></div><div class="art-symbol">✦</div><h3>Tu talento tiene lugar</h3><p>Conecta · Crece · Trabaja</p><div class="art-lines"><i></i><i></i><i></i></div></div><div class="float-note note-a">✓ Empresas y talento</div><div class="float-note note-b">↗ Nuevas oportunidades</div></div>
+</div></section>
+<section class="stats"><div class="container stats-grid"><div><b id="jobsCount">0</b><span>Vacantes activas</span></div><div><b id="companiesCount">0</b><span>Empresas registradas</span></div><div><b>100%</b><span>Enfocado en nuestra región</span></div></div></section>
+
+<section class="section" id="vacantes"><div class="container"><div class="section-heading"><div><span class="eyebrow dark">ENCUENTRA TU OPORTUNIDAD</span><h2>Vacantes disponibles</h2><p>Explora ofertas publicadas por empresas y postúlate directamente.</p></div><button class="btn btn-outline" id="reloadJobs">Actualizar ↻</button></div>
+<div class="filters"><input id="searchJobs" type="search" placeholder="Cargo, empresa o palabra clave"><select id="filterCity"><option value="">Todas las ciudades</option><option>Cúcuta</option><option>Villa del Rosario</option><option>Los Patios</option><option>Ocaña</option><option>Pamplona</option><option>Otra</option></select><select id="filterArea"><option value="">Todas las áreas</option><option>Tecnología</option><option>Administración</option><option>Ventas</option><option>Salud</option><option>Educación</option><option>Servicios</option><option>Logística</option><option>Otra</option></select><button class="btn" id="searchBtn">Buscar</button></div>
+<div class="jobs-grid" id="jobsList"><div class="empty">Cargando vacantes...</div></div><p class="hint">Las vacantes reales aparecerán aquí cuando una empresa las publique y se active la base de datos.</p>
+</div></section>
+
+<section class="section soft" id="como-funciona"><div class="container"><div class="center-heading"><span class="eyebrow dark">UN PROCESO SENCILLO</span><h2>Una plataforma, dos caminos</h2><p>Conectamos personas que buscan oportunidades con empresas que necesitan talento.</p></div>
+<div class="two-cards"><article class="info-card"><div class="round-icon">♙</div><span class="kicker">PARA CANDIDATOS</span><h3>Encuentra un trabajo que impulse tu futuro.</h3><p>Crea tu cuenta, completa tu perfil, adjunta tu hoja de vida y postúlate a las vacantes.</p><ul><li>Perfil profesional y hoja de vida.</li><li>Seguimiento al estado de tus postulaciones.</li><li>Notificación cuando una empresa actualice tu proceso.</li></ul><button class="btn" data-register-role="candidate">Crear cuenta de candidato</button></article>
+<article class="info-card dark-card" id="empresas"><div class="round-icon">▣</div><span class="kicker">PARA EMPRESAS</span><h3>Encuentra el talento que tu equipo necesita.</h3><p>Registra tu empresa, publica vacantes y administra las postulaciones recibidas.</p><ul><li>Publicación y edición de vacantes.</li><li>Consulta de candidatos postulados.</li><li>Actualización del proceso hasta la contratación.</li></ul><button class="btn btn-cyan" data-register-role="employer">Crear cuenta de empresa</button></article></div>
+</div></section>
+
+<section class="section" id="panel"><div class="container"><div class="section-heading"><div><span class="eyebrow dark">TU ESPACIO</span><h2>Panel de usuario</h2><p>Inicia sesión para gestionar tu actividad en Cúcuta Empleos.</p></div></div><div class="dashboard" id="dashboard"><div class="empty">Inicia sesión para ver tus postulaciones, vacantes o procesos de selección.</div></div></div></section>
+
+<section class="section about-section"><div class="container about-grid"><div><span class="eyebrow dark">PROYECTO ACADÉMICO</span><h2>Cúcuta Empleos</h2><p>Una propuesta digital para fortalecer la conexión entre el talento humano y las oportunidades laborales de Cúcuta y Norte de Santander.</p><p class="academic">Proyecto de Grado · Fase 3<br><b>UNAD – Universidad Nacional Abierta y a Distancia</b><br>Código: 202016907A_2204</p></div><div class="creators"><span class="kicker">CREADORES DEL PROYECTO</span><div class="creator"><span>JL</span><div><b>Juan Luis Vásquez Mújica</b><small>Integrante del proyecto</small></div></div><div class="creator"><span>GR</span><div><b>Gabriel Andrés Roser Cortés</b><small>Integrante del proyecto</small></div></div><div class="unad-mark">UNAD <small>Universidad Nacional Abierta y a Distancia</small></div></div></div></section>
+</main>
+<footer class="footer"><div class="container footer-main"><a class="brand brand-footer" href="#inicio"><span class="brand-mark">CE</span><span>CÚCUTA <b>EMPLEOS</b></span></a><p>Conectando talentos con oportunidades laborales en Cúcuta y Norte de Santander.</p><a href="#inicio">Volver arriba ↑</a></div><div class="container footer-bottom"><span>© <span id="year"></span> Cúcuta Empleos</span><span>Proyecto de Grado · UNAD · Fase 3 · 202016907A_2204</span></div></footer>
+
+<div class="modal hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle"><div class="modal-card"><button class="modal-close" data-close aria-label="Cerrar">×</button><span class="eyebrow dark">BIENVENIDO A CÚCUTA EMPLEOS</span><h2 id="authTitle">Iniciar sesión</h2><p id="authSubtitle">Ingresa con tu correo y contraseña.</p>
+<form id="authForm"><label id="nameField" class="hidden">Nombre completo<input id="fullName" autocomplete="name"></label><label>Correo electrónico<input id="authEmail" type="email" required autocomplete="email" placeholder="correo@ejemplo.com"></label><label>Contraseña<input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="Mínimo 8 caracteres"></label><label id="roleField" class="hidden">Tipo de cuenta<select id="accountRole"><option value="candidate">Candidato</option><option value="employer">Empresa / Reclutador</option></select></label><label id="companyField" class="hidden">Nombre de la empresa<input id="companyName" placeholder="Nombre comercial"></label><button class="btn full" id="authSubmit" type="submit">Iniciar sesión</button><p class="form-message" id="authMessage" role="status"></p></form><button class="switch-auth" id="switchAuth">¿No tienes cuenta? Regístrate</button><p class="fine-print">Al registrarte aceptas el tratamiento de tus datos para la gestión de tu perfil y postulaciones. Configura la política de privacidad antes de abrir el servicio al público.</p></div></div>
+
+<div class="modal hidden" id="jobModal" role="dialog" aria-modal="true" aria-labelledby="jobModalTitle"><div class="modal-card wide"><button class="modal-close" data-close aria-label="Cerrar">×</button><span class="eyebrow dark">OPORTUNIDAD LABORAL</span><h2 id="jobModalTitle">Publicar una vacante</h2><p>Completa los datos del empleo. La vacante quedará asociada a tu cuenta de empresa.</p>
+<form id="jobForm" class="form-grid"><label>Título del cargo *<input id="jobTitle" required placeholder="Ej. Auxiliar administrativo"></label><label>Empresa *<input id="jobCompany" required placeholder="Nombre de la empresa"></label><label>Ciudad *<select id="jobCity" required><option value="">Selecciona</option><option>Cúcuta</option><option>Villa del Rosario</option><option>Los Patios</option><option>Ocaña</option><option>Pamplona</option><option>Otra</option></select></label><label>Área *<select id="jobArea" required><option value="">Selecciona</option><option>Tecnología</option><option>Administración</option><option>Ventas</option><option>Salud</option><option>Educación</option><option>Servicios</option><option>Logística</option><option>Otra</option></select></label><label>Tipo de contrato<select id="jobContract"><option>Indefinido</option><option>Fijo</option><option>Prestación de servicios</option><option>Temporal</option><option>Prácticas</option></select></label><label>Modalidad<select id="jobMode"><option>Presencial</option><option>Híbrido</option><option>Remoto</option></select></label><label class="span-two">Descripción y funciones *<textarea id="jobDescription" rows="5" required placeholder="Describe funciones, requisitos y experiencia..."></textarea></label><label>Salario (opcional)<input id="jobSalary" placeholder="Ej. A convenir"></label><label>Correo de contacto<input id="jobContact" type="email" placeholder="seleccion@empresa.com"></label><button class="btn span-two" type="submit">Publicar vacante</button><p class="form-message span-two" id="jobMessage"></p></form></div></div>
+
+<div class="toast hidden" id="toast" role="status"></div>
+</body></html>
