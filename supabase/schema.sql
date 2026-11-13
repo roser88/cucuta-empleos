@@ -79,6 +79,7 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
 for each row execute procedure public.handle_new_user();
+revoke all on function public.handle_new_user() from public, anon, authenticated;
 
 create or replace function public.prevent_profile_role_escalation()
 returns trigger language plpgsql set search_path = ''
@@ -95,6 +96,7 @@ drop trigger if exists prevent_profile_role_change on public.profiles;
 create trigger prevent_profile_role_change
 before update on public.profiles
 for each row execute procedure public.prevent_profile_role_escalation();
+revoke all on function public.prevent_profile_role_escalation() from public, anon, authenticated;
 
 alter table public.profiles enable row level security;
 alter table public.jobs enable row level security;
@@ -104,10 +106,10 @@ create policy "profiles_select_self_or_employer_public" on public.profiles
 for select to authenticated using (id = (select auth.uid()));
 
 create policy "profiles_insert_self" on public.profiles
-for insert to authenticated with check (id = auth.uid());
+for insert to authenticated with check (id = (select auth.uid()));
 
 create policy "profiles_update_self" on public.profiles
-for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+for update to authenticated using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
 create policy "profiles_employer_read_applicants" on public.profiles
 for select to authenticated using (
@@ -116,7 +118,7 @@ for select to authenticated using (
     from public.applications a
     join public.jobs j on j.id = a.job_id
     where a.candidate_id = profiles.id
-      and j.employer_id = auth.uid()
+      and j.employer_id = (select auth.uid())
   )
 );
 
@@ -126,7 +128,7 @@ for select to anon, authenticated using (status = 'published' or employer_id = a
 create policy "jobs_employer_insert" on public.jobs
 for insert to authenticated with check (
   employer_id = auth.uid() and exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role in ('employer','admin')
+    select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('employer','admin')
   )
 );
 
@@ -159,3 +161,26 @@ for update to authenticated using (
 
 -- Hoja de vida privada: bucket y políticas de acceso por propietario/postulación.
 insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types) values ('candidate-cvs','candidate-cvs',false,10485760,array['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']) on conflict (id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+
+drop policy if exists "Candidates upload own CV" on storage.objects;
+create policy "Candidates upload own CV" on storage.objects for insert to authenticated
+with check (bucket_id='candidate-cvs' and (storage.foldername(name))[1]=(select auth.uid())::text and storage.extension(name) in ('pdf','doc','docx'));
+
+drop policy if exists "Candidates update own CV" on storage.objects;
+create policy "Candidates update own CV" on storage.objects for update to authenticated
+using (bucket_id='candidate-cvs' and (storage.foldername(name))[1]=(select auth.uid())::text)
+with check (bucket_id='candidate-cvs' and (storage.foldername(name))[1]=(select auth.uid())::text and storage.extension(name) in ('pdf','doc','docx'));
+
+drop policy if exists "Candidates delete own CV" on storage.objects;
+create policy "Candidates delete own CV" on storage.objects for delete to authenticated
+using (bucket_id='candidate-cvs' and (storage.foldername(name))[1]=(select auth.uid())::text);
+
+drop policy if exists "Candidates and hiring employers read CV" on storage.objects;
+create policy "Candidates and hiring employers read CV" on storage.objects for select to authenticated
+using (bucket_id='candidate-cvs' and (
+  (storage.foldername(name))[1]=(select auth.uid())::text
+  or exists (
+    select 1 from public.applications a join public.jobs j on j.id=a.job_id
+    where a.candidate_id::text=(storage.foldername(name))[1] and j.employer_id=(select auth.uid())
+  )
+));
