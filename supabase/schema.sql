@@ -83,7 +83,7 @@ revoke all on function public.handle_new_user() from public, anon, authenticated
 
 create or replace function public.prevent_profile_role_escalation()
 returns trigger language plpgsql set search_path = ''
-as $
+as $$
 begin
   if new.role is distinct from old.role then
     raise exception 'El rol de usuario no puede modificarse desde el perfil.';
