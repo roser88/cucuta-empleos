@@ -52,6 +52,7 @@ function updateAuthUI() {
   $("loginBtn").classList.toggle("hidden", !!currentUser);
   $("registerBtn").classList.toggle("hidden", !!currentUser);
   $("logoutBtn").classList.toggle("hidden", !currentUser);
+  if ($("profileBtn")) $("profileBtn").classList.toggle("hidden", !currentUser);
 }
 async function loadJobs() {
   const list = $("jobsList");
@@ -242,7 +243,7 @@ $("applicationForm").addEventListener("submit",saveApplication);
 $("loginBtn").addEventListener("click",()=>authDialog("login"));
 $("registerBtn").addEventListener("click",()=>authDialog("signup"));
 $("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();await loadDashboard();toast("Has cerrado sesión. Regresando al inicio...");window.scrollTo({top:0,behavior:"smooth"});setTimeout(()=>{location.href="index.html#inicio";},3000);});
-$("heroPublish").addEventListener("click",openPublish);
+$("heroPublish").addEventListener("click",()=>location.href="publicar.html");
 document.querySelectorAll("[data-register-role]").forEach(b=>b.addEventListener("click",()=>authDialog("signup",b.dataset.registerRole)));
 $("reloadJobs").addEventListener("click",loadJobs);
 $("searchBtn").addEventListener("click",renderJobs);
