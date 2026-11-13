@@ -130,8 +130,19 @@ async function updateApplicationStatus(id,status){
 }
 
 
+async function renderNotifications(dash){
+ if(!currentUser||!db)return;
+ const {data,error}=await db.from("notifications").select("id,title,message,is_read,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
+ if(error){console.warn("No se pudieron cargar notificaciones",error);return;}
+ const panel=document.createElement("section");panel.className="dash-panel notification-panel";
+ const items=(data||[]).map(n=>'<article class="notification-item '+(n.is_read?"read":"unread")+'"><b>'+escapeHTML(n.title)+'</b><p>'+escapeHTML(n.message)+'</p><small>'+new Date(n.created_at).toLocaleString("es-CO")+'</small>'+(n.is_read?"":' <button class="text-button" data-notification-read="'+n.id+'">Marcar como leída</button>')+'</article>').join("");
+ panel.innerHTML="<h3>Notificaciones</h3>"+(items||'<p class="hint">No tienes notificaciones.</p>');
+ dash.appendChild(panel);
+ panel.querySelectorAll("[data-notification-read]").forEach(b=>b.addEventListener("click",async()=>{const {error}=await db.from("notifications").update({is_read:true}).eq("id",b.dataset.notificationRead);if(!error){b.closest(".notification-item").classList.remove("unread");b.closest(".notification-item").classList.add("read");b.remove();}}));
+}
 async function loadDashboard() {
   await loadDashboardBase();
+  await renderNotifications($("dashboard"));
   if (!currentUser || !profile || !db) return;
   const dash=$("dashboard");
   if(profile.role==="candidate"){
