@@ -145,11 +145,23 @@ for select to authenticated using (
   )
 );
 
-create policy "applications_candidate_insert" on public.applications
+create or replace function public.current_user_is_candidate()
+returns boolean language sql stable security definer set search_path = ''
+as $
+  select exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.role = 'candidate'
+  );
+$;
+revoke all on function public.current_user_is_candidate() from public,anon;
+grant execute on function public.current_user_is_candidate() to authenticated;
+
+drop policy if exists applications_candidate_insert on public.applications;
+create policy applications_candidate_insert on public.applications
 for insert to authenticated with check (
-  candidate_id = auth.uid()
-  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'candidate')
-  and exists (select 1 from public.jobs j where j.id = job_id and j.status = 'published')
+  candidate_id = (select auth.uid())
+  and (select public.current_user_is_candidate())
+  and exists (select 1 from public.jobs j where j.id = applications.job_id and j.status = 'published')
 );
 
 create policy "applications_employer_update" on public.applications
