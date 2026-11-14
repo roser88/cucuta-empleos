@@ -69,14 +69,14 @@ El esquema y las políticas SQL se encuentran en `supabase/schema.sql`.
 
 ## Notificaciones por correo: siguiente mejora
 
-Las notificaciones descritas arriba son actualmente notificaciones internas del portal. **El envío de correos transaccionales automáticos todavía no está implementado.**
+Las notificaciones internas siguen disponibles. La integración de correo ya cuenta con una Edge Function desplegada y llamadas desde los eventos de consulta de HV, cambio de estado y nueva postulación. **El envío real queda pendiente de configurar los secretos `RESEND_API_KEY` y `EMAIL_FROM` en Supabase y verificar el dominio/remitente en Resend.**
 
 La mejora propuesta contempla correos como:
 - Avisar al candidato cuando una empresa consulte su hoja de vida.
 - Avisar al candidato cuando cambie el estado de su postulación o sea convocado a entrevista.
 - Avisar a la empresa cuando reciba una nueva postulación.
 
-La arquitectura prevista es Supabase Edge Functions más un proveedor de correo transaccional (por ejemplo, Resend). Requiere configurar y verificar un dominio o remitente, guardar la API key del proveedor como secreto del servidor y probar las plantillas y eventos. No se deben enviar correos directamente desde el navegador ni exponer claves privadas.
+La arquitectura implementada usa Supabase Edge Functions y Resend. Configura `RESEND_API_KEY`, `EMAIL_FROM` y opcionalmente `APP_URL` como secretos de la función. Verifica el dominio o remitente en Resend antes de esperar entregas reales. No se envían correos directamente desde el navegador ni se exponen claves privadas.
 
 ## Configuración y publicación
 
@@ -90,7 +90,7 @@ La publicación de GitHub Pages y el funcionamiento completo en producción debe
 
 ## Pendientes antes de producción
 
-- Implementar y probar el envío de correos transaccionales descrito en la sección anterior.
+- Configurar y probar Resend: verificar dominio/remitente y guardar `RESEND_API_KEY`, `EMAIL_FROM` y `APP_URL` como secretos de Edge Functions.
 - Completar el flujo de recuperación de contraseña, incluyendo la pantalla para establecer una contraseña nueva.
 - Incorporar verificación documental de empresas y moderación administrativa de vacantes.
 - Evaluar chat interno entre candidatos y empresas.
