@@ -90,9 +90,10 @@ async function submitApplication(jobId) {
 async function saveApplication(e){
  e.preventDefault();if(!pendingJobId||!currentUser||profile?.role!=="candidate")return;
  const b=$("applicationSubmit");b.disabled=true;b.textContent="Enviando...";
- const {error}=await db.from("applications").insert({job_id:pendingJobId,candidate_id:currentUser.id,status:"submitted",cover_letter:$("coverLetter").value.trim()||null});
+ const {data:createdApplication,error}=await db.from("applications").insert({job_id:pendingJobId,candidate_id:currentUser.id,status:"submitted",cover_letter:$("coverLetter").value.trim()||null}).select("id").single();
  b.disabled=false;b.textContent="Enviar postulación";
  if(error){$("applicationMessage").textContent=error.code==="23505"?"Ya te postulaste a esta vacante.":error.message;return;}
+ if(createdApplication?.id){const {error:mailError}=await db.functions.invoke("send-notification-email",{body:{event_type:"new_application",entity_id:createdApplication.id}});if(mailError)console.warn("Correo de nueva postulación pendiente:",mailError.message);}
  hideModals();pendingJobId=null;toast("¡Postulación enviada!");location.href="dashboard.html";
 }
 function showJobDetails(id){
@@ -127,6 +128,7 @@ function statusLabel(status){return ({submitted:"Postulación recibida",reviewin
 async function updateApplicationStatus(id,status){
   const {error}=await db.from("applications").update({status}).eq("id",id);
   if(error){toast("No se pudo actualizar el estado.");return;}
+  const {error:mailError}=await db.functions.invoke("send-notification-email",{body:{event_type:"application_status",entity_id:id}});if(mailError)console.warn("Correo de cambio de estado pendiente:",mailError.message);
   toast("Estado de postulación actualizado.");loadDashboard();
 }
 
@@ -141,9 +143,33 @@ async function renderNotifications(dash){
  dash.appendChild(panel);
  panel.querySelectorAll("[data-notification-read]").forEach(b=>b.addEventListener("click",async()=>{const {error}=await db.from("notifications").update({is_read:true}).eq("id",b.dataset.notificationRead);if(!error){b.closest(".notification-item").classList.remove("unread");b.closest(".notification-item").classList.add("read");b.remove();}}));
 }
+
+async function renderEmailPreferences(dash){
+ if(!currentUser||!db)return;
+ let {data:prefs,error}=await db.from("notification_preferences").select("*").eq("user_id",currentUser.id).maybeSingle();
+ if(error){console.warn("Preferencias de correo:",error.message);return;}
+ if(!prefs){const result=await db.from("notification_preferences").upsert({user_id:currentUser.id},{onConflict:"user_id"}).select("*").single();prefs=result.data;}
+ if(!prefs)return;
+ const panel=document.createElement("section");panel.className="dash-panel";
+ panel.innerHTML='<h3>Preferencias de correo electrónico</h3><p class="hint">Elige qué avisos quieres recibir por correo. Las notificaciones dentro del portal seguirán disponibles.</p>'+
+ '<form id="emailPrefsForm" class="profile-grid">'+
+ '<label class="wide"><input type="checkbox" name="email_cv_viewed" '+(prefs.email_cv_viewed?'checked':'')+'> Avisarme cuando una empresa consulte mi hoja de vida</label>'+
+ '<label class="wide"><input type="checkbox" name="email_application_status" '+(prefs.email_application_status?'checked':'')+'> Avisarme cuando cambie el estado de mi postulación</label>'+
+ '<label class="wide"><input type="checkbox" name="email_new_application" '+(prefs.email_new_application?'checked':'')+'> Avisar a mi empresa cuando llegue una nueva postulación</label>'+
+ '<button class="btn wide" type="submit">Guardar preferencias</button><p id="emailPrefsMsg" class="form-message wide"></p></form>';
+ dash.appendChild(panel);
+ $("emailPrefsForm").addEventListener("submit",async e=>{
+  e.preventDefault();const form=e.currentTarget;
+  const values={user_id:currentUser.id,email_cv_viewed:form.elements.email_cv_viewed.checked,email_application_status:form.elements.email_application_status.checked,email_new_application:form.elements.email_new_application.checked,updated_at:new Date().toISOString()};
+  const {error}=await db.from("notification_preferences").upsert(values,{onConflict:"user_id"});
+  $("emailPrefsMsg").textContent=error?error.message:"Preferencias guardadas correctamente.";
+ });
+}
+
 async function loadDashboard() {
   await loadDashboardBase();
   await renderNotifications($("dashboard"));
+  await renderEmailPreferences($("dashboard"));
   if (!currentUser || !profile || !db) return;
   const dash=$("dashboard");
   if(profile.role==="candidate"){
@@ -183,7 +209,7 @@ async function loadDashboard() {
   } else {
     const {data:jobs}=await db.from("jobs").select("id").eq("employer_id",currentUser.id);
     const ids=(jobs||[]).map(j=>j.id);if(!ids.length)return;
-    const {data:apps,error}=await db.from("applications").select("id,status,cover_letter,cv_viewed_at,profiles:profiles!applications_candidate_id_fkey(full_name,email,phone,city,professional_title,bio,skills,education,experience,linkedin_url,cv_storage_path),jobs(title)").in("job_id",ids);
+    const {data:apps,error}=await db.from("applications").select("id,status,job_id,candidate_id,cover_letter,cv_viewed_at,profiles:profiles!applications_candidate_id_fkey(full_name,email,phone,city,professional_title,bio,skills,education,experience,linkedin_url,cv_storage_path),jobs(title)").in("job_id",ids);
     if(error){console.error(error);return;}
     const panel=document.createElement("div");panel.className="dash-panel";panel.innerHTML="<h3>Perfiles de candidatos y hojas de vida</h3>";
     (apps||[]).forEach(a=>{
@@ -203,6 +229,9 @@ async function loadDashboard() {
         if(error){win.close();toast(error.message);return;}
         const {error:mark}=await db.from("applications").update({cv_viewed_at:new Date().toISOString()}).eq("id",a.id);
         if(mark){win.close();toast(mark.message);return;}
+        const {data:viewEvent,error:viewError}=await db.from("cv_view_events").insert({application_id:a.id,job_id:a.job_id,candidate_id:a.candidate_id,employer_id:currentUser.id}).select("id").single();
+        if(viewError){console.warn("No se pudo guardar el evento de consulta:",viewError.message);}
+        else {const {error:mailError}=await db.functions.invoke("send-notification-email",{body:{event_type:"cv_viewed",entity_id:viewEvent.id}});if(mailError)console.warn("Correo de consulta de HV pendiente:",mailError.message);}
         win.location.href=data.signedUrl;toast("Visualización registrada.");
       });
       panel.appendChild(item);
