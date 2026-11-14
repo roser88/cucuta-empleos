@@ -1,74 +1,104 @@
-# Cúcuta Empleos — Proyecto de Grado UNAD, Fase 3
+# Cúcuta Empleos
 
-**Creadores**
-- Juan Luis Vásquez Mújica
-- Gabriel Andrés Roser Cortés
+Portal web de intermediación laboral para publicar vacantes, crear perfiles profesionales y gestionar postulaciones.
 
-**Universidad:** UNAD — Universidad Nacional Abierta y a Distancia  
-**Proyecto de Grado:** 202016907A_2204
+## Información del proyecto
 
-## Funciones incluidas en la versión actual
-- Interfaz adaptable a computador, tableta y celular.
-- Búsqueda de vacantes por palabra clave, ciudad y área.
-- Vista de detalles de cada vacante.
-- Registro e inicio de sesión de candidatos y empresas con Supabase Auth.
-- Perfil profesional editable del candidato: contacto, ciudad, profesión, resumen, habilidades, formación, experiencia y LinkedIn.
-- Carga de hoja de vida PDF, DOC o DOCX de máximo 10 MB en almacenamiento privado.
-- Postulación a una vacante con mensaje de presentación opcional.
-- Panel del candidato para consultar postulaciones y la fecha de visualización de su hoja de vida.
-- Panel de empresa para consultar perfiles y hojas de vida de personas postuladas.
-- Gestión de vacantes propias: publicar, pausar o cerrar.
-- Seguimiento de candidaturas: recibida, en revisión, entrevista, puede ser contactado, hoja de vida conservada, contratado o no seleccionado.
-- Vacantes con nombre de empresa confidencial.
-- Notificaciones internas cuando una persona se postula y cuando cambia el estado de una candidatura.
-- Recuperación de contraseña por correo (requiere configurar redirecciones y correo en Supabase).
-- Base de datos relacional con políticas RLS y permisos de almacenamiento privado.
+- **Proyecto académico:** Proyecto de Grado – UNAD, Fase 3
+- **Código:** 202016907A_2204
+- **Universidad:** Universidad Nacional Abierta y a Distancia (UNAD)
+- **Creadores:**
+  - Juan Luis Vásquez Mújica
+  - Gabriel Andrés Roser Cortés
+- **Repositorio:** https://github.com/roser88/cucuta-empleos
 
-## Importante: activar la base de datos
-El sitio no queda conectado a una base de datos hasta crear y configurar tu proyecto Supabase.
+## Tecnologías
 
-1. Entra a https://supabase.com y crea un proyecto.
-2. Abre **SQL Editor → New query**.
-3. Copia y ejecuta todo el contenido de `supabase/schema.sql`.
-4. Ve a **Project Settings → API**.
-5. Copia el **Project URL** y la clave **anon / publishable**.
-6. Abre `app.js` y reemplaza:
-   - `PEGA_AQUI_TU_SUPABASE_PROJECT_URL`
-   - `PEGA_AQUI_TU_SUPABASE_ANON_PUBLIC_KEY`
-7. Guarda los cambios y vuelve a subir los archivos a GitHub.
+- HTML, CSS y JavaScript para la interfaz.
+- Supabase Auth para registro e inicio de sesión.
+- Supabase Database (PostgreSQL) para perfiles, vacantes, postulaciones y notificaciones.
+- Supabase Storage para hojas de vida privadas.
+- GitHub para el control de versiones y GitHub Pages como opción de publicación estática.
 
-No uses ni publiques la clave `service_role`. La clave anon/publishable está diseñada para el navegador y queda protegida por las políticas RLS del esquema.
+## Funcionalidades implementadas
 
-## Configuración recomendada de Auth
-En Supabase → Authentication → URL Configuration:
-- Site URL: la URL final publicada (por ejemplo, GitHub Pages o Vercel).
-- Redirect URLs: agrega también la URL local de pruebas si la usas.
-- Para producción, activa confirmación de correo y configura SMTP para que los mensajes lleguen correctamente.
+### Experiencia pública
+- Interfaz adaptable a computadores, tabletas y celulares.
+- Consulta y búsqueda de vacantes por palabra clave, ciudad y área.
+- Visualización de los detalles de cada vacante.
+- Vacantes que pueden mostrar la empresa como confidencial.
 
-## Publicar gratis en GitHub Pages
-1. Crea un repositorio público llamado `cucuta-empleos`.
-2. Sube `index.html`, `styles.css`, `app.js`, `README.md` y la carpeta `supabase`.
-3. En Settings → Pages, elige Deploy from a branch, `main`, carpeta `/ (root)`.
-4. Espera el enlace de GitHub Pages.
-5. Registra ese enlace en Supabase Auth → URL Configuration.
+### Cuentas y perfiles
+- Registro e inicio de sesión para candidatos y empresas mediante Supabase Auth.
+- Perfil profesional editable del candidato con nombre, teléfono, ciudad, título profesional, resumen, habilidades, formación, experiencia y enlace de LinkedIn.
+- Solicitud de recuperación de contraseña por correo mediante Supabase Auth. El envío y la redirección dependen de la configuración de correo y URL en Supabase.
 
-También puedes desplegar el repositorio con Vercel o Netlify.
+### Hojas de vida y postulaciones
+- Carga de hojas de vida en PDF, DOC o DOCX, con límite de 10 MB.
+- Almacenamiento privado de los archivos en Supabase Storage.
+- Acceso al CV limitado al candidato propietario y a empresas autorizadas por una postulación.
+- Postulación a vacantes con mensaje de presentación opcional.
+- Panel del candidato para consultar sus postulaciones y la fecha en que una empresa visualizó su hoja de vida.
 
-## Antes de recibir datos reales
-Esta es una base funcional inicial para un proyecto académico, no una plataforma auditada para producción. Antes de abrir registros públicos:
-- Completa una política de tratamiento de datos personales conforme a la Ley 1581 de 2012 (Colombia) y solicita autorización informada.
-- Configura privacidad de perfiles y archivos de hojas de vida.
-- Crea un bucket privado de Supabase Storage y políticas para que cada candidato administre su propio CV y solo las empresas autorizadas puedan consultarlo durante una postulación.
-- Implementa verificación de empresas, moderación de vacantes, recuperación de contraseña, protección anti-spam, CAPTCHA y correo transaccional.
-- Revisa permisos, RLS y pruebas de seguridad con usuarios de prueba.
+### Panel de empresas
+- Consulta de las personas postuladas a las vacantes propias.
+- Consulta de perfiles profesionales y hojas de vida de candidatos postulados.
+- Visualización del mensaje de presentación.
+- Administración de vacantes propias: publicar, pausar o cerrar.
+- Actualización del estado de cada candidatura: recibida, en revisión, entrevista, puede ser contactado, hoja de vida conservada, contratado o no seleccionado.
 
-## Limitaciones conocidas de esta entrega
-- Incluye perfil profesional editable y carga privada de hojas de vida PDF/DOC/DOCX (máximo 10 MB), con acceso limitado al candidato y a empresas que recibieron su postulación.
-- Registra la fecha en que una empresa abre la hoja de vida y permite mostrarla al candidato.
-- Incluye etapas adicionales de selección: puede ser contactado y hoja de vida conservada para futuras oportunidades.
-- Permite publicar vacantes con identidad de empresa confidencial.
-- No incluye chat interno entre candidato y empresa ni envío de notificaciones por WhatsApp/SMS.
-- Las notificaciones actuales son internas dentro del panel; no son correos automáticos.
-- No incluye todavía verificación documental automática de empresas ni un panel administrativo de moderación.
-- El flujo de contratación se representa mediante el estado de la postulación que actualiza la empresa; la contratación legal se realiza por fuera de la plataforma.
-- Los formularios y la autenticación requieren configurar Supabase para operar.
+### Notificaciones dentro del portal
+- Notificación a la empresa cuando recibe una nueva postulación.
+- Notificación al candidato cuando la empresa cambia el estado de su candidatura.
+- Consulta de notificaciones desde el panel y opción para marcarlas como leídas.
+- Registro de la fecha de visualización de la hoja de vida para mostrarla al candidato.
+
+## Base de datos y seguridad
+
+El proyecto utiliza Supabase con políticas de seguridad a nivel de fila (RLS) para controlar el acceso a perfiles, vacantes, postulaciones y notificaciones. También dispone de políticas para el almacenamiento privado de hojas de vida y controles para evitar cambios no autorizados de rol o de identidad de una postulación.
+
+Las tablas principales son:
+- `profiles`
+- `jobs`
+- `applications`
+- `notifications`
+
+El esquema y las políticas SQL se encuentran en `supabase/schema.sql`.
+
+**Claves y secretos:** nunca publiques la clave `service_role` ni secretos de proveedores en el código del navegador o en el repositorio. La aplicación web debe utilizar únicamente la clave pública/anon o publishable de Supabase, protegida por RLS.
+
+## Notificaciones por correo: siguiente mejora
+
+Las notificaciones descritas arriba son actualmente notificaciones internas del portal. **El envío de correos transaccionales automáticos todavía no está implementado.**
+
+La mejora propuesta contempla correos como:
+- Avisar al candidato cuando una empresa consulte su hoja de vida.
+- Avisar al candidato cuando cambie el estado de su postulación o sea convocado a entrevista.
+- Avisar a la empresa cuando reciba una nueva postulación.
+
+La arquitectura prevista es Supabase Edge Functions más un proveedor de correo transaccional (por ejemplo, Resend). Requiere configurar y verificar un dominio o remitente, guardar la API key del proveedor como secreto del servidor y probar las plantillas y eventos. No se deben enviar correos directamente desde el navegador ni exponer claves privadas.
+
+## Configuración y publicación
+
+El proyecto está conectado al proyecto Supabase configurado para esta aplicación. Para revisar o cambiar la configuración:
+1. En Supabase, verifica Authentication, URL Configuration y las URL de redirección del sitio.
+2. Comprueba que el esquema de `supabase/schema.sql` esté aplicado en la base de datos.
+3. En GitHub, entra a **Settings → Pages** y confirma que GitHub Pages esté desplegando la rama `main` desde la carpeta `/ (root)`, si se desea publicar desde GitHub Pages.
+4. Configura en Supabase la URL pública definitiva del sitio.
+
+La publicación de GitHub Pages y el funcionamiento completo en producción deben verificarse desde el navegador una vez habilitado el despliegue.
+
+## Pendientes antes de producción
+
+- Implementar y probar el envío de correos transaccionales descrito en la sección anterior.
+- Completar el flujo de recuperación de contraseña, incluyendo la pantalla para establecer una contraseña nueva.
+- Incorporar verificación documental de empresas y moderación administrativa de vacantes.
+- Evaluar chat interno entre candidatos y empresas.
+- Añadir controles anti-spam/CAPTCHA y límites de solicitudes.
+- Completar la política de tratamiento de datos personales y autorización informada conforme a la normativa colombiana aplicable, incluida la Ley 1581 de 2012.
+- Realizar pruebas de extremo a extremo con cuentas separadas de candidato y empresa, incluyendo carga, consulta y permisos de CV.
+- Ejecutar una revisión de seguridad y privacidad antes de aceptar datos personales reales.
+
+## Estado y alcance
+
+Este repositorio contiene una base funcional en desarrollo para el proyecto académico. La existencia de funciones y políticas en el código no sustituye las pruebas integrales ni una auditoría de seguridad. No se debe considerar listo para producción hasta completar los pendientes anteriores y verificar el despliegue, la configuración de Supabase y los flujos reales con usuarios de prueba.
