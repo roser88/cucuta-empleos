@@ -252,3 +252,59 @@ drop trigger if exists prevent_application_identity_change on public.application
 create trigger prevent_application_identity_change before update on public.applications
 for each row execute procedure public.prevent_application_identity_change();
 revoke all on function public.prevent_application_identity_change() from public,anon,authenticated;
+
+
+-- Registro histórico de consultas de hojas de vida y preferencias de correo.
+create table if not exists public.notification_preferences (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  email_cv_viewed boolean not null default true,
+  email_application_status boolean not null default true,
+  email_new_application boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+alter table public.notification_preferences enable row level security;
+drop policy if exists notification_preferences_read_own on public.notification_preferences;
+create policy notification_preferences_read_own on public.notification_preferences for select to authenticated using (user_id=(select auth.uid()));
+drop policy if exists notification_preferences_insert_own on public.notification_preferences;
+create policy notification_preferences_insert_own on public.notification_preferences for insert to authenticated with check (user_id=(select auth.uid()));
+drop policy if exists notification_preferences_update_own on public.notification_preferences;
+create policy notification_preferences_update_own on public.notification_preferences for update to authenticated using (user_id=(select auth.uid())) with check (user_id=(select auth.uid()));
+grant select,insert,update on public.notification_preferences to authenticated;
+
+create table if not exists public.cv_view_events (
+ id uuid primary key default gen_random_uuid(),
+ application_id uuid not null references public.applications(id) on delete cascade,
+ job_id uuid not null references public.jobs(id) on delete cascade,
+ candidate_id uuid not null references public.profiles(id) on delete cascade,
+ employer_id uuid not null references public.profiles(id) on delete cascade,
+ viewed_at timestamptz not null default now()
+);
+create index if not exists cv_view_events_candidate_viewed_idx on public.cv_view_events(candidate_id,viewed_at desc);
+create index if not exists cv_view_events_application_idx on public.cv_view_events(application_id,viewed_at desc);
+alter table public.cv_view_events enable row level security;
+drop policy if exists cv_views_employer_insert_authorized on public.cv_view_events;
+create policy cv_views_employer_insert_authorized on public.cv_view_events for insert to authenticated with check (
+ employer_id=(select auth.uid()) and exists (
+  select 1 from public.jobs j join public.applications a on a.job_id=j.id
+  where j.id=cv_view_events.job_id and j.employer_id=(select auth.uid())
+   and a.id=cv_view_events.application_id and a.candidate_id=cv_view_events.candidate_id
+ )
+);
+drop policy if exists cv_views_candidate_read_own on public.cv_view_events;
+create policy cv_views_candidate_read_own on public.cv_view_events for select to authenticated using (candidate_id=(select auth.uid()));
+drop policy if exists cv_views_employer_read_own on public.cv_view_events;
+create policy cv_views_employer_read_own on public.cv_view_events for select to authenticated using (employer_id=(select auth.uid()));
+grant select,insert on public.cv_view_events to authenticated;
+
+create or replace function public.sync_cv_view_timestamp()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+begin
+ update public.applications set cv_viewed_at=new.viewed_at
+ where id=new.application_id and (cv_viewed_at is null or new.viewed_at>cv_viewed_at);
+ return new;
+end;
+$$;
+drop trigger if exists sync_cv_view_timestamp on public.cv_view_events;
+create trigger sync_cv_view_timestamp after insert on public.cv_view_events for each row execute procedure public.sync_cv_view_timestamp();
+revoke all on function public.sync_cv_view_timestamp() from public,anon,authenticated;
