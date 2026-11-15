@@ -70,11 +70,16 @@ function authDialog(mode="login", role="candidate") {
   $("authMessage").textContent = "";
   showModal("authModal");
 }
-function showPrivacyGate(){ hideModals(); $("dataConsentLabel").hidden=true; $("dataConsentLabel").style.display="none"; $("privacyGateCheck").checked=false; $("privacyGateMessage").textContent=""; showModal("privacyGateModal"); }
+function showPrivacyGate(){ if(profile?.data_consent_at) return; hideModals(); const signupConsent=$("dataConsentLabel"); signupConsent.hidden=true; signupConsent.style.display="none"; $("privacyGateCheck").checked=false; $("privacyGateMessage").textContent=""; showModal("privacyGateModal"); }
+let privacyConsentSaving=false;
 async function acceptPrivacyGate(){
+  if(privacyConsentSaving) return;
+  if(profile?.data_consent_at){ location.replace("dashboard.html"); return; }
   if(!currentUser){ $("privacyGateMessage").textContent="Tu sesión no está activa. Inicia sesión nuevamente."; return; }
   if(!$("privacyGateCheck").checked){ $("privacyGateMessage").textContent="Debes marcar la casilla para autorizar el tratamiento de datos y continuar."; return; }
+  privacyConsentSaving=true; $("privacyGateMessage").textContent="Guardando autorización..."; $("privacyGateModal").querySelector("button[type=submit]").disabled=true;
   const {data,error}=await db.rpc("record_privacy_consent");
+  $("privacyGateModal").querySelector("button[type=submit]").disabled=false; privacyConsentSaving=false;
   if(error||!data?.accepted){ $("privacyGateMessage").textContent="No fue posible guardar tu autorización: "+(error?.message||"respuesta no confirmada")+". Inténtalo nuevamente."; console.error("record_privacy_consent:",error||data); return; }
   profile={...(profile||{}),data_consent_at:data.accepted_at,data_consent_version:"2026-11-15"};
   location.replace("dashboard.html");
