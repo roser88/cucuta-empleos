@@ -72,7 +72,9 @@ function renderJobs() {
   const term = $("searchJobs").value.toLowerCase().trim();
   const city = $("filterCity").value;
   const area = $("filterArea").value;
+  const sort = $("sortJobs")?.value || "newest";
   const filtered = jobsCache.filter(j => (!city || j.city===city) && (!area || j.area===area) && (!term || `${j.title} ${j.company_name} ${j.description}`.toLowerCase().includes(term)));
+  filtered.sort((a,b)=>sort==="oldest"?new Date(a.created_at)-new Date(b.created_at):new Date(b.created_at)-new Date(a.created_at));
   $("jobsList").innerHTML = filtered.length ? filtered.map(j => `
     <article class="job-card"><span class="job-area">${escapeHTML(j.area || "Oportunidad")}</span><h3>${escapeHTML(j.title)}</h3><div class="job-company">${escapeHTML(j.is_confidential ? "Empresa confidencial" : j.company_name)}</div>
     <div class="job-meta"><span>⌖ ${escapeHTML(j.city)}</span><span>◷ ${escapeHTML(j.work_mode || "Presencial")}</span><span>▣ ${escapeHTML(j.contract_type || "Por definir")}</span></div>
@@ -90,7 +92,8 @@ async function submitApplication(jobId) {
 async function saveApplication(e){
  e.preventDefault();if(!pendingJobId||!currentUser||profile?.role!=="candidate")return;
  const b=$("applicationSubmit");b.disabled=true;b.textContent="Enviando...";
- const {data:createdApplication,error}=await db.from("applications").insert({job_id:pendingJobId,candidate_id:currentUser.id,status:"submitted",cover_letter:$("coverLetter").value.trim()||null}).select("id").single();
+ if(!$("applicationConsent").checked){$("applicationMessage").textContent="Debes autorizar el tratamiento de datos para enviar tu postulación.";b.disabled=false;b.textContent="Enviar postulación";return;}
+ const {data:createdApplication,error}=await db.from("applications").insert({job_id:pendingJobId,candidate_id:currentUser.id,status:"submitted",cover_letter:$("coverLetter").value.trim()||null,data_consent:true,data_consent_at:new Date().toISOString(),data_consent_version:"2026-11-15"}).select("id").single();
  b.disabled=false;b.textContent="Enviar postulación";
  if(error){$("applicationMessage").textContent=error.code==="23505"?"Ya te postulaste a esta vacante.":error.message;return;}
  if(createdApplication?.id){const {error:mailError}=await db.functions.invoke("send-notification-email",{body:{event_type:"new_application",entity_id:createdApplication.id}});if(mailError)console.warn("Correo de nueva postulación pendiente:",mailError.message);}
@@ -250,7 +253,9 @@ $("authForm").addEventListener("submit",async e=>{
     currentUser=data.user; await loadProfile(); hideModals(); updateAuthUI(); toast("Sesión iniciada correctamente."); location.href="dashboard.html";
   } else {
     const role=$("accountRole").value,fullName=$("fullName").value.trim();
-    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim()}}});
+    if(!$("dataConsent").checked){$("authMessage").textContent="Debes leer y autorizar el tratamiento de datos para crear tu cuenta.";return;}
+    const consentAt=new Date().toISOString();
+    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim(),data_consent_at:consentAt,data_consent_version:"2026-11-15"}}});
     if(error){$("authMessage").textContent=error.message;return;}
     $("authMessage").textContent="Cuenta creada. Si Supabase solicita confirmar el correo, revisa tu bandeja de entrada. Después inicia sesión.";
     $("authForm").reset();
@@ -277,6 +282,7 @@ document.querySelectorAll("[data-register-role]").forEach(b=>b.addEventListener(
 $("reloadJobs").addEventListener("click",loadJobs);
 $("searchBtn").addEventListener("click",renderJobs);
 $("searchJobs").addEventListener("input",renderJobs);
+$("sortJobs")?.addEventListener("change",renderJobs);
 $("filterCity").addEventListener("change",renderJobs);$("filterArea").addEventListener("change",renderJobs);
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",hideModals));
 document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)hideModals();}));
