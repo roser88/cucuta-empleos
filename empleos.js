@@ -8,13 +8,25 @@ function render(){
   '<article class="candidate-row"><div><h3>'+esc(j.title)+'</h3><p>'+esc(j.is_confidential?"Empresa confidencial":j.company_name)+' · '+esc(j.city)+' · '+esc(j.work_mode||"Presencial")+'</p><p>'+esc((j.description||"").slice(0,220))+'</p></div><button class="primary-btn" data-apply="'+esc(j.id)+'">Postularme</button></article>'
  ).join(""):'<div class="empty">No hay vacantes que coincidan con tu búsqueda.</div>';
 }
-db.from("jobs").select("id,title,company_name,is_confidential,city,work_mode,description,created_at").eq("status","published").order("created_at",{ascending:false}).then(({data,error})=>{
+db.from("jobs").select("id,title,company_name,is_confidential,city,area,contract_type,work_mode,description,salary,contact_email,created_at").eq("status","published").order("created_at",{ascending:false}).then(({data,error})=>{
  rows=data||[];
  document.getElementById("jobs").innerHTML=error?"No se pudieron cargar las vacantes.":"";
  render();
 });
 document.getElementById("q").addEventListener("input",render);document.getElementById("sortJobs").addEventListener("change",render);document.getElementById("cityFilter").addEventListener("change",render);
 document.getElementById("jobs").addEventListener("click",async e=>{
+ const detail=e.target.closest("[data-details]");
+ if(detail){
+  const j=rows.find(x=>x.id===detail.dataset.details);if(!j)return;
+  document.getElementById("vacancyTitle").textContent=j.title||"Vacante";
+  document.getElementById("vacancyCompany").textContent=j.is_confidential?"Empresa confidencial":(j.company_name||"Empresa no especificada");
+  document.getElementById("vacancyMeta").textContent=[j.city,j.area,j.contract_type,j.work_mode].filter(Boolean).join(" · ");
+  document.getElementById("vacancyDescription").textContent=j.description||"La empresa no agregó una descripción.";
+  document.getElementById("vacancySalary").textContent=j.salary||"La empresa no indicó el salario.";
+  document.getElementById("vacancyContact").textContent=j.contact_email||"La empresa no publicó un correo de contacto.";
+  document.getElementById("vacancyDate").textContent=j.created_at?new Date(j.created_at).toLocaleDateString("es-CO"):"";
+  document.getElementById("vacancyModal").hidden=false;return;
+ }
  const b=e.target.closest("[data-apply]");if(!b)return;
  const {data:{user}}=await db.auth.getUser();
  if(!user){location.href="index.html";return;}
