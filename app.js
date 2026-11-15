@@ -256,8 +256,7 @@ $("authForm").addEventListener("submit",async e=>{
   } else {
     const role=$("accountRole").value,fullName=$("fullName").value.trim();
     if(!$("dataConsent").checked){$("authMessage").textContent="Debes leer y autorizar el tratamiento de datos para crear tu cuenta.";return;}
-    const consentAt=new Date().toISOString();
-    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim(),data_consent_at:consentAt,data_consent_version:"2026-11-15"}}});
+    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim(),data_consent:true,data_consent_version:"2026-11-15"}}});
     if(error){$("authMessage").textContent=error.message;return;}
     $("authMessage").textContent="Cuenta creada. Si Supabase solicita confirmar el correo, revisa tu bandeja de entrada. Después inicia sesión.";
     $("authForm").reset();
