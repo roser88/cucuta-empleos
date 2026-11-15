@@ -65,6 +65,16 @@ function authDialog(mode="login", role="candidate") {
   $("authMessage").textContent = "";
   showModal("authModal");
 }
+function showPrivacyGate(){ $("privacyGateCheck").checked=false; $("privacyGateMessage").textContent=""; hideModals(); showModal("privacyGateModal"); }
+async function acceptPrivacyGate(){
+  if(!currentUser){ $("privacyGateMessage").textContent="Tu sesión no está activa. Inicia sesión nuevamente."; return; }
+  if(!$("privacyGateCheck").checked){ $("privacyGateMessage").textContent="Debes marcar la casilla para autorizar el tratamiento de datos y continuar."; return; }
+  const acceptedAt=new Date().toISOString();
+  const {error}=await db.from("profiles").update({data_consent_at:acceptedAt,data_consent_version:"2026-11-15"}).eq("id",currentUser.id);
+  if(error){ $("privacyGateMessage").textContent="No fue posible guardar tu autorización. Inténtalo nuevamente."; console.error(error); return; }
+  profile={...(profile||{}),data_consent_at:acceptedAt,data_consent_version:"2026-11-15"};
+  location.replace("dashboard.html");
+}
 function openPublish() {
   if (!currentUser) { authDialog("login"); toast("Inicia sesión con una cuenta de empresa para publicar vacantes."); return; }
   if (profile?.role !== "employer" && profile?.role !== "admin") { toast("La publicación de vacantes está habilitada para cuentas de empresa."); return; }
@@ -273,6 +283,9 @@ async function loadDashboard() {
   }
 }
 
+$("privacyGateForm").addEventListener("submit",e=>{e.preventDefault();acceptPrivacyGate();});
+$("privacyGateDecline").addEventListener("click",async()=>{await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();hideModals();toast("No aceptaste la política. No se inició sesión.");});
+$("privacyGateModal").addEventListener("click",e=>{if(e.target===$("privacyGateModal"))e.stopPropagation();});
 $("authForm").addEventListener("submit",async e=>{
   e.preventDefault(); if(!db){$("authMessage").textContent="Primero configura Supabase siguiendo README.md.";return;}
   const email=$("authEmail").value.trim(),password=$("authPassword").value;
@@ -280,7 +293,7 @@ $("authForm").addEventListener("submit",async e=>{
   if(authMode==="login"){
     const {data,error}=await db.auth.signInWithPassword({email,password});
     if(error){$("authMessage").textContent=error.message;return;}
-    currentUser=data.user; await loadProfile(); hideModals(); updateAuthUI(); toast("Sesión iniciada correctamente."); location.href="dashboard.html";
+    currentUser=data.user; await loadProfile(); updateAuthUI(); if(!profile?.data_consent_at){showPrivacyGate();return;} hideModals(); toast("Sesión iniciada correctamente."); location.replace("dashboard.html");
   } else {
     const role=$("accountRole").value,fullName=$("fullName").value.trim();
     if(!$("dataConsent").checked){$("authMessage").textContent="Debes leer y autorizar el tratamiento de datos para crear tu cuenta.";return;}
@@ -314,7 +327,7 @@ $("searchJobs").addEventListener("input",renderJobs);
 $("sortJobs")?.addEventListener("change",renderJobs);
 $("filterCity").addEventListener("change",renderJobs);$("filterArea").addEventListener("change",renderJobs);
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",hideModals));
-document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)hideModals();}));
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="privacyGateModal")hideModals();}));
 $("menuToggle").addEventListener("click",()=>{const n=$("mainNav");n.classList.toggle("open");$("menuToggle").setAttribute("aria-expanded",String(n.classList.contains("open")));});
 $("mainNav").querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>$("mainNav").classList.remove("open")));
 $("year").textContent=new Date().getFullYear();
@@ -322,7 +335,7 @@ $("year").textContent=new Date().getFullYear();
 async function init(){
   if(!db){updateAuthUI();await loadJobs();loadDashboard();return;}
   const {data:{session}}=await db.auth.getSession();
-  currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}await loadProfile();updateAuthUI();await loadJobs();await loadHomepagePromotions();await loadDashboard();
+  currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}await loadProfile();updateAuthUI();if(currentUser&&!profile?.data_consent_at){showPrivacyGate();}await loadJobs();await loadHomepagePromotions();await loadDashboard();
   db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}else clearTimeout(idleTimer);await loadProfile();updateAuthUI();loadDashboard();});
 }
 init();
