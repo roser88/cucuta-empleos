@@ -19,6 +19,8 @@ create table if not exists public.profiles (
   education text,
   experience text,
   linkedin_url text,
+  data_consent_at timestamptz,
+  data_consent_version text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -64,13 +66,15 @@ create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
 begin
-  insert into public.profiles(id, full_name, email, role, company_name)
+  insert into public.profiles(id, full_name, email, role, company_name, data_consent_at, data_consent_version)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name',''),
     coalesce(new.email,''),
     case when new.raw_user_meta_data->>'role' = 'employer' then 'employer' else 'candidate' end,
-    nullif(new.raw_user_meta_data->>'company_name','')
+    nullif(new.raw_user_meta_data->>'company_name',''),
+    case when new.raw_user_meta_data->>'data_consent' = 'true' then now() else null end,
+    case when new.raw_user_meta_data->>'data_consent' = 'true' then coalesce(new.raw_user_meta_data->>'data_consent_version','2026-11-15') else null end
   );
   return new;
 end;
