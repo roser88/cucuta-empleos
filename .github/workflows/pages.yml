@@ -23,6 +23,44 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate JavaScript syntax
+        run: |
+          set -e
+          for file in *.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+      - name: Validate local HTML links and assets
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import sys
+          root = Path('.')
+          class Audit(HTMLParser):
+              def __init__(self, path):
+                  super().__init__()
+                  self.path = path
+                  self.errors = []
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key not in ('href', 'src') or not value:
+                          continue
+                      if value.startswith(('#', 'http://', 'https://', 'mailto:', 'tel:', 'data:', 'javascript:')):
+                          continue
+                      target = value.split('#', 1)[0].split('?', 1)[0]
+                      if target and not (root / target).exists():
+                          self.errors.append(f'{self.path}: missing {key}={value}')
+          errors = []
+          for path in root.glob('*.html'):
+              audit = Audit(path)
+              audit.feed(path.read_text(encoding='utf-8'))
+              errors.extend(audit.errors)
+          if errors:
+              print('\\n'.join(errors))
+              sys.exit(1)
+          print('All local HTML links and assets exist.')
+          PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site
