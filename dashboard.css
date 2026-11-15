@@ -5,3 +5,5 @@
 *{font-style:normal!important}
 
 .company-nav{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.company-nav a:not(.primary-btn){font-size:13px;color:#34516e;text-decoration:none}.company-rating{color:#d28a00;font-weight:800;letter-spacing:1px}.panel h2{margin-top:0}
+
+.admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:18px 0}.admin-grid>.panel{min-width:0}.view#view-admin>.panel{margin:18px 0}.view#view-admin .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.view#view-admin .form-grid .full{grid-column:1/-1}.view#view-admin input,.view#view-admin select,.view#view-admin textarea{max-width:100%;padding:10px;border:1px solid var(--line);border-radius:8px}.secondary-btn{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--blue)}@media(max-width:800px){.admin-grid{grid-template-columns:1fr}.view#view-admin .form-grid{grid-template-columns:1fr}.view#view-admin .form-grid .full{grid-column:auto}}
