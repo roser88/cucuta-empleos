@@ -393,3 +393,19 @@ $$;
 drop trigger if exists prevent_company_review_identity_change on public.company_reviews;
 create trigger prevent_company_review_identity_change before update on public.company_reviews for each row execute procedure public.prevent_company_review_identity_change();
 revoke all on function public.prevent_company_review_identity_change() from public,anon,authenticated;
+
+
+-- Protege la evidencia de autorización: no puede alterarse después de crear la postulación.
+create or replace function public.prevent_application_consent_change()
+returns trigger language plpgsql set search_path=''
+as $$
+begin
+ if new.data_consent is distinct from old.data_consent or new.data_consent_at is distinct from old.data_consent_at or new.data_consent_version is distinct from old.data_consent_version then
+  raise exception 'La evidencia de autorización de una postulación no puede modificarse.';
+ end if;
+ return new;
+end;
+$$;
+drop trigger if exists prevent_application_consent_change on public.applications;
+create trigger prevent_application_consent_change before update on public.applications for each row execute procedure public.prevent_application_consent_change();
+revoke all on function public.prevent_application_consent_change() from public,anon,authenticated;
