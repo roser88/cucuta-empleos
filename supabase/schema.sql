@@ -409,3 +409,40 @@ $$;
 drop trigger if exists prevent_application_consent_change on public.applications;
 create trigger prevent_application_consent_change before update on public.applications for each row execute procedure public.prevent_application_consent_change();
 revoke all on function public.prevent_application_consent_change() from public,anon,authenticated;
+
+
+-- Registro de autorización con sello de tiempo del servidor y protección de integridad.
+alter table public.profiles add column if not exists data_consent boolean not null default false;
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+begin
+ if coalesce(new.raw_user_meta_data->>'data_consent','false') <> 'true' or coalesce(new.raw_user_meta_data->>'data_consent_version','') <> '2026-11-15' then raise exception 'Se requiere autorización expresa para crear la cuenta.'; end if;
+ insert into public.profiles(id,full_name,email,role,company_name,data_consent,data_consent_at,data_consent_version)
+ values(new.id,coalesce(new.raw_user_meta_data->>'full_name',''),coalesce(new.email,''),case when new.raw_user_meta_data->>'role'='employer' then 'employer' else 'candidate' end,nullif(new.raw_user_meta_data->>'company_name',''),true,now(),'2026-11-15');
+ return new;
+end;
+$$;
+revoke all on function public.handle_new_user() from public,anon,authenticated;
+create or replace function public.enforce_application_consent()
+returns trigger language plpgsql set search_path=''
+as $$
+begin
+ if new.data_consent is distinct from true or new.data_consent_version is distinct from '2026-11-15' then raise exception 'Se requiere autorización expresa para enviar la postulación.'; end if;
+ new.data_consent_at:=now();return new;
+end;
+$$;
+drop trigger if exists enforce_application_consent on public.applications;
+create trigger enforce_application_consent before insert on public.applications for each row execute procedure public.enforce_application_consent();
+revoke all on function public.enforce_application_consent() from public,anon,authenticated;
+create or replace function public.prevent_profile_consent_change()
+returns trigger language plpgsql set search_path=''
+as $$
+begin
+ if new.data_consent is distinct from old.data_consent or new.data_consent_at is distinct from old.data_consent_at or new.data_consent_version is distinct from old.data_consent_version then raise exception 'La evidencia de autorización de la cuenta no puede modificarse.'; end if;
+ return new;
+end;
+$$;
+drop trigger if exists prevent_profile_consent_change on public.profiles;
+create trigger prevent_profile_consent_change before update on public.profiles for each row execute procedure public.prevent_profile_consent_change();
+revoke all on function public.prevent_profile_consent_change() from public,anon,authenticated;
