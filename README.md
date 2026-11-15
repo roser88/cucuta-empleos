@@ -12,6 +12,13 @@ Portal web de intermediación laboral para publicar vacantes, crear perfiles pro
   - Gabriel Andrés Roser Cortés
 - **Repositorio:** https://github.com/roser88/cucuta-empleos
 
+## Panel de administración
+
+- Cuenta administrativa inicial asignada a la cuenta existente de Gabriel Andrés Roser Cortés (`gabrielroser@outlook.com`). El acceso requiere la contraseña ya conocida por el titular o restablecimiento de contraseña por Supabase; no existe una contraseña predeterminada ni se almacena una clave en el repositorio.
+- Panel de control para publicar/desactivar banners y logos, gestionar anuncios de portada, revisar reportes, moderar vacantes y eliminar opiniones.
+- Diagnóstico básico de conectividad y disponibilidad de tablas. La reparación de errores de código/infraestructura sigue requiriendo intervención técnica y despliegues controlados.
+- Archivos visuales en bucket público `site-assets` con escritura restringida a administradores.
+
 ## Tecnologías
 
 - HTML, CSS y JavaScript para la interfaz.
@@ -113,6 +120,11 @@ Este repositorio contiene una base funcional en desarrollo para el proyecto acad
 
 
 ## Registro de cambios – 15 de noviembre de 2026
+
+- Se agregó panel administrador y cuenta inicial del administrador principal (Gabriel Andrés Roser Cortés), con control RLS en backend.
+- Se habilitó gestión de banners/logos, anuncios, reportes de errores, moderación de vacantes y opiniones.
+- Se agregaron tablas y políticas de administrador, bucket de recursos visuales y diagnóstico básico.
+- Se completó la política con nombres y correos de contacto de los dos integrantes del proyecto; falta formalizar responsable legal y datos físicos no suministrados.
 
 - Se corrigieron enlaces del logo del panel para regresar al sitio público y se añadió acceso directo a Buscar empleos.
 - Se añadieron ordenamiento por fecha ascendente/descendente y filtro por ciudad en la página de vacantes.
