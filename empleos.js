@@ -5,7 +5,7 @@ function render(){
  const q=document.getElementById("q").value.toLowerCase();
  const city=document.getElementById("cityFilter").value;const sort=document.getElementById("sortJobs").value;const filtered=rows.filter(x=>(!city||x.city===city)&&(x.title+" "+x.company_name+" "+x.description).toLowerCase().includes(q)).sort((a,b)=>sort==="oldest"?new Date(a.created_at)-new Date(b.created_at):new Date(b.created_at)-new Date(a.created_at));
  document.getElementById("jobs").innerHTML=filtered.length?filtered.map(j=>
-  '<article class="candidate-row"><div><h3>'+esc(j.title)+'</h3><p>'+esc(j.is_confidential?"Empresa confidencial":j.company_name)+' · '+esc(j.city)+' · '+esc(j.work_mode||"Presencial")+'</p><p>'+esc((j.description||"").slice(0,220))+'</p></div><button class="primary-btn" data-apply="'+esc(j.id)+'">Postularme</button></article>'
+  '<article class="candidate-row"><div><h3>'+esc(j.title)+'</h3><p>'+esc(j.is_confidential?"Empresa confidencial":j.company_name)+' · '+esc(j.city)+' · '+esc(j.work_mode||"Presencial")+'</p><p>'+esc((j.description||"").slice(0,220))+'</p></div><button class="secondary-btn" data-details="'+esc(j.id)+'">Ver información completa</button><button class="primary-btn" data-apply="'+esc(j.id)+'">Postularme</button></article>'
  ).join(""):'<div class="empty">No hay vacantes que coincidan con tu búsqueda.</div>';
 }
 db.from("jobs").select("id,title,company_name,is_confidential,city,area,contract_type,work_mode,description,salary,contact_email,created_at").eq("status","published").order("created_at",{ascending:false}).then(({data,error})=>{
