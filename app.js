@@ -10,6 +10,7 @@ const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes
 const db = configured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const $ = (id) => document.getElementById(id);
+function safeHttpUrl(value){try{const u=new URL(String(value||""),location.href);return ["http:","https:"].includes(u.protocol)?u.href:"";}catch{return "";}}
 let currentUser = null;
 let profile = null;
 let authMode = "login";
@@ -93,7 +94,7 @@ function updateAuthUI() {
   $("logoutBtn").classList.toggle("hidden", !currentUser);
   if ($("profileBtn")) $("profileBtn").classList.toggle("hidden", !currentUser);
 }
-async function loadHomepagePromotions(){const host=$("homePromotions");if(!host||!db)return;const [b,a]=await Promise.all([db.from("site_banners").select("id,title,subtitle,image_url,target_url,sort_order").eq("is_active",true).eq("placement","home").order("sort_order"),db.from("site_announcements").select("id,title,body,kind").eq("is_active",true).order("created_at",{ascending:false}).limit(3)]);const banners=b.data||[],ann=a.data||[];host.innerHTML=ann.map(x=>'<article class="home-announcement '+escapeHTML(x.kind)+'"><b>'+escapeHTML(x.title)+'</b><p>'+escapeHTML(x.body)+'</p></article>').join("")+banners.map(x=>'<article class="home-banner">'+(x.image_url?'<img src="'+escapeHTML(x.image_url)+'" alt="'+escapeHTML(x.title)+'"> ':'')+'<div><h3>'+escapeHTML(x.title)+'</h3><p>'+escapeHTML(x.subtitle||"") +'</p>'+(x.target_url?'<a href="'+escapeHTML(x.target_url)+'" rel="noopener">Conocer más →</a>':'')+'</div></article>').join("");}
+async function loadHomepagePromotions(){const host=$("homePromotions");if(!host||!db)return;const [b,a]=await Promise.all([db.from("site_banners").select("id,title,subtitle,image_url,target_url,sort_order").eq("is_active",true).eq("placement","home").order("sort_order"),db.from("site_announcements").select("id,title,body,kind").eq("is_active",true).order("created_at",{ascending:false}).limit(3)]);const banners=b.data||[],ann=a.data||[];host.innerHTML=ann.map(x=>'<article class="home-announcement '+escapeHTML(x.kind)+'"><b>'+escapeHTML(x.title)+'</b><p>'+escapeHTML(x.body)+'</p></article>').join("")+banners.map(x=>'<article class="home-banner">'+(x.image_url?'<img src="'+escapeHTML(x.image_url)+'" alt="'+escapeHTML(x.title)+'"> ':'')+'<div><h3>'+escapeHTML(x.title)+'</h3><p>'+escapeHTML(x.subtitle||"") +'</p>'+(safeHttpUrl(x.target_url)?'<a href="'+escapeHTML(safeHttpUrl(x.target_url))+'" target="_blank" rel="noopener noreferrer">Conocer más →</a>':'')+'</div></article>').join("");}
 async function loadJobs() {
   const list = $("jobsList");
   if (!db) {
