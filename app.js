@@ -89,7 +89,7 @@ let pendingJobId = null;
 async function submitApplication(jobId) {
  if(!currentUser){authDialog("login");toast("Inicia sesión como candidato para postularte.");return;}
  if(profile?.role!=="candidate"){toast("Solo las cuentas de candidato pueden postularse.");return;}
- if(!profile?.cv_storage_path){toast("Antes de postularte, carga tu hoja de vida en Mi perfil.");location.hash="#panel";await loadDashboard();return;} pendingJobId=jobId;$("coverLetter").value="";$("applicationMessage").textContent="Tu hoja de vida cargada se adjuntará automáticamente a esta postulación.";showModal("applicationModal");
+ if(!profile?.cv_storage_path){toast("Antes de postularte, carga tu hoja de vida en Mi perfil.");location.hash="#panel";await loadDashboard();return;} pendingJobId=jobId;$("applicationConsent").checked=false;$("coverLetter").value="";$("applicationMessage").textContent="Tu hoja de vida cargada se adjuntará automáticamente a esta postulación.";showModal("applicationModal");
 }
 async function saveApplication(e){
  e.preventDefault();if(!pendingJobId||!currentUser||profile?.role!=="candidate")return;
