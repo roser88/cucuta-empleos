@@ -27,6 +27,8 @@ function authDialog(mode="login", role="candidate") {
   $("authTitle").textContent = mode === "login" ? "Iniciar sesión" : "Crear una cuenta";
   $("authSubtitle").textContent = mode === "login" ? "Ingresa con tu correo y contraseña." : "Regístrate para usar todas las funciones de la plataforma.";
   $("nameField").classList.toggle("hidden", mode === "login");
+  $("dataConsentLabel").classList.toggle("hidden", mode === "login");
+  if(mode==="signup") $("dataConsent").checked=false;
   $("roleField").classList.toggle("hidden", mode === "login");
   $("companyField").classList.toggle("hidden", mode === "login" || role !== "employer");
   $("accountRole").value = role;
