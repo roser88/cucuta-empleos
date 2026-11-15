@@ -128,7 +128,7 @@ function renderJobs() {
     <article class="job-card"><span class="job-area">${escapeHTML(j.area || "Oportunidad")}</span><h3>${escapeHTML(j.title)}</h3><div class="job-company">${escapeHTML(j.is_confidential ? "Empresa confidencial" : j.company_name)}</div>
     <div class="job-meta"><span>⌖ ${escapeHTML(j.city)}</span><span>◷ ${escapeHTML(j.work_mode || "Presencial")}</span><span>▣ ${escapeHTML(j.contract_type || "Por definir")}</span></div>
     <p class="job-desc">${escapeHTML((j.description || "").slice(0,145))}${(j.description||"").length>145?"…":""}</p>
-    <div class="job-footer"><small>${j.salary ? escapeHTML(j.salary) : "Salario a convenir"}</small><button class="btn apply-btn" data-details="${j.id}">Ver detalles</button><button class="btn apply-btn" data-apply="${j.id}">Postularme</button></div></article>`).join("") : `<div class="empty">No encontramos vacantes con esos filtros. Intenta otra búsqueda.</div>`;
+    <div class="job-footer"><small>${j.salary ? escapeHTML(j.salary) : "Salario no especificado"}</small><button class="btn apply-btn" data-details="${j.id}">Ver detalles</button><button class="btn apply-btn" data-apply="${j.id}">Postularme</button></div></article>`).join("") : `<div class="empty">No encontramos vacantes con esos filtros. Intenta otra búsqueda.</div>`;
 }
 function escapeHTML(value="") { return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
@@ -150,9 +150,13 @@ async function saveApplication(e){
 }
 function showJobDetails(id){
  const j=jobsCache.find(x=>x.id===id);if(!j)return;
- $("detailTitle").textContent=j.title;$("detailCompany").textContent=j.is_confidential?"Empresa confidencial":j.company_name;
+ $("detailTitle").textContent=j.title;
+ $("detailCompany").textContent=j.is_confidential?"Empresa confidencial":(j.company_name||"Empresa no especificada");
  $("detailMeta").textContent=[j.city,j.area,j.contract_type,j.work_mode].filter(Boolean).join(" · ");
- $("detailDescription").textContent=j.description||"Sin descripción.";$("detailSalary").textContent=j.salary||"Salario a convenir";
+ $("detailDescription").textContent=j.description||"La empresa no agregó una descripción.";
+ $("detailSalary").textContent=j.salary||"La empresa no indicó el salario.";
+ $("detailContact").textContent=j.contact_email||"La empresa no publicó un correo de contacto.";
+ $("detailDate").textContent=j.created_at?new Date(j.created_at).toLocaleDateString("es-CO"):"";
  $("detailApply").dataset.apply=id;showModal("jobDetailsModal");
 }
 async function loadDashboardBase() {
@@ -296,20 +300,63 @@ $("privacyGateForm").addEventListener("submit",e=>{e.preventDefault();acceptPriv
 $("privacyGateDecline").addEventListener("click",async()=>{await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();hideModals();toast("No aceptaste la política. No se inició sesión.");});
 $("privacyGateModal").addEventListener("click",e=>{if(e.target===$("privacyGateModal"))e.stopPropagation();});
 $("authForm").addEventListener("submit",async e=>{
-  e.preventDefault(); if(!db){$("authMessage").textContent="Primero configura Supabase siguiendo README.md.";return;}
+  e.preventDefault();
+  if(!db){$("authMessage").textContent="El servicio de cuentas no está configurado. Inténtalo más tarde.";return;}
   const email=$("authEmail").value.trim(),password=$("authPassword").value;
-  $("authMessage").textContent="Procesando...";
-  if(authMode==="login"){
-    const {data,error}=await db.auth.signInWithPassword({email,password});
-    if(error){$("authMessage").textContent=error.message;return;}
-    currentUser=data.user; await loadProfile(); updateAuthUI(); if(!profile?.data_consent_at){showPrivacyGate();return;} hideModals(); toast("Sesión iniciada correctamente."); location.replace("dashboard.html");
-  } else {
-    const role=$("accountRole").value,fullName=$("fullName").value.trim();
-    if(!$("dataConsent").checked){$("authMessage").textContent="Debes leer y autorizar el tratamiento de datos para crear tu cuenta.";return;}
-    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim(),data_consent:true,data_consent_version:"2026-11-15"}}});
-    if(error){$("authMessage").textContent=error.message;return;}
-    $("authMessage").textContent="Cuenta creada. Si Supabase solicita confirmar el correo, revisa tu bandeja de entrada. Después inicia sesión.";
-    $("authForm").reset();
+  const submit=$("authSubmit");submit.disabled=true;submit.textContent=authMode==="login"?"Verificando...":"Creando cuenta...";
+  $("authMessage").textContent="Procesando solicitud...";
+  try{
+    if(authMode==="login"){
+      const {data,error}=await db.auth.signInWithPassword({email,password});
+      if(error){
+        const msg=String(error.message||"");
+        $("authMessage").textContent=/email not confirmed/i.test(msg)
+          ?"Tu correo aún no está confirmado. Abre el mensaje de confirmación que te enviamos y luego vuelve a iniciar sesión."
+          :/invalid login credentials/i.test(msg)
+          ?"Correo o contraseña incorrectos. Verifica los datos o utiliza «¿Olvidaste tu contraseña?»."
+          :msg;
+        return;
+      }
+      currentUser=data.user||null;
+      await loadProfile();
+      updateAuthUI();
+      if(!currentUser){$("authMessage").textContent="No se pudo establecer la sesión. Vuelve a intentarlo.";return;}
+      if(!profile){
+        $("authMessage").textContent="Tu cuenta inició sesión, pero todavía no tiene perfil asociado. Contacta al administrador para revisar la cuenta.";
+        return;
+      }
+      if(!profile.data_consent_at){
+        $("privacyGateMessage").textContent="Para terminar el ingreso, debes aceptar la política de tratamiento de datos.";
+        showPrivacyGate();return;
+      }
+      hideModals();toast("Sesión iniciada correctamente.");location.replace("dashboard.html");
+    }else{
+      const role=$("accountRole").value,fullName=$("fullName").value.trim();
+      if(!fullName){$("authMessage").textContent="Escribe tu nombre completo.";return;}
+      if(!$("dataConsent").checked){$("authMessage").textContent="Debes leer y autorizar el tratamiento de datos para crear tu cuenta.";return;}
+      const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:fullName,role,company_name:$("companyName").value.trim(),data_consent:true,data_consent_version:"2026-11-15"}}});
+      if(error){$("authMessage").textContent=error.message;return;}
+      if(data.session&&data.user){
+        currentUser=data.user;await loadProfile();updateAuthUI();
+        if(!profile?.data_consent_at){showPrivacyGate();return;}
+        location.replace("dashboard.html");return;
+      }
+      $("authMessage").textContent="Registro recibido. Revisa la bandeja de entrada (incluida la carpeta de spam) y confirma tu correo antes de iniciar sesión. No necesitas crear otra cuenta.";
+      $("authEmail").value=email;
+      $("authPassword").value="";
+      authMode="login";
+      $("authTitle").textContent="Confirma tu correo";
+      $("authSubtitle").textContent="Después de confirmar el correo, ingresa con tu contraseña.";
+      $("nameField").classList.add("hidden");$("roleField").classList.add("hidden");$("companyField").classList.add("hidden");
+      $("dataConsentLabel").classList.add("hidden");$("dataConsentLabel").hidden=true;
+      $("authSubmit").textContent="Iniciar sesión";
+      $("switchAuth").textContent="Crear otra cuenta";
+    }
+  }catch(err){
+    console.error("Error de autenticación:",err);
+    $("authMessage").textContent="No fue posible completar la operación por un error de conexión. Inténtalo nuevamente.";
+  }finally{
+    submit.disabled=false;submit.textContent=authMode==="login"?"Iniciar sesión":"Crear cuenta";
   }
 });
 $("switchAuth").addEventListener("click",()=>authDialog(authMode==="login"?"signup":"login"));
