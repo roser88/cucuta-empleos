@@ -320,3 +320,58 @@ $$;
 drop trigger if exists sync_cv_view_timestamp on public.cv_view_events;
 create trigger sync_cv_view_timestamp after insert on public.cv_view_events for each row execute procedure public.sync_cv_view_timestamp();
 revoke all on function public.sync_cv_view_timestamp() from public,anon,authenticated;
+
+
+-- Extensiones funcionales: privacidad y autorización, perfiles y reseñas públicas.
+alter table public.profiles add column if not exists data_consent_at timestamptz;
+alter table public.profiles add column if not exists data_consent_version text;
+alter table public.applications add column if not exists data_consent boolean not null default false;
+alter table public.applications add column if not exists data_consent_at timestamptz;
+alter table public.applications add column if not exists data_consent_version text;
+create table if not exists public.company_profiles (company_id uuid primary key references public.profiles(id) on delete cascade,public_name text not null,city text,description text,website text,created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+alter table public.company_profiles enable row level security;
+drop policy if exists company_profiles_public_read on public.company_profiles;
+create policy company_profiles_public_read on public.company_profiles for select to anon,authenticated using(true);
+drop policy if exists company_profiles_owner_insert on public.company_profiles;
+create policy company_profiles_owner_insert on public.company_profiles for insert to authenticated with check(company_id=(select auth.uid()) and exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role in('employer','admin')));
+drop policy if exists company_profiles_owner_update on public.company_profiles;
+create policy company_profiles_owner_update on public.company_profiles for update to authenticated using(company_id=(select auth.uid())) with check(company_id=(select auth.uid()));
+grant select on public.company_profiles to anon,authenticated;
+grant insert,update on public.company_profiles to authenticated;
+create table if not exists public.company_reviews(id uuid primary key default gen_random_uuid(),company_id uuid not null references public.profiles(id) on delete cascade,candidate_id uuid not null references public.profiles(id) on delete cascade,rating smallint not null check(rating between 1 and 5),comment text not null check(char_length(comment) between 5 and 1200),created_at timestamptz not null default now(),updated_at timestamptz not null default now(),unique(company_id,candidate_id));
+create index if not exists company_reviews_company_idx on public.company_reviews(company_id,created_at desc);
+alter table public.company_reviews enable row level security;
+drop policy if exists company_reviews_public_read on public.company_reviews;
+create policy company_reviews_public_read on public.company_reviews for select to anon,authenticated using(true);
+drop policy if exists company_reviews_candidate_insert on public.company_reviews;
+create policy company_reviews_candidate_insert on public.company_reviews for insert to authenticated with check(candidate_id=(select auth.uid()) and exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role='candidate') and exists(select 1 from public.applications a join public.jobs j on j.id=a.job_id where a.candidate_id=(select auth.uid()) and j.employer_id=company_reviews.company_id));
+drop policy if exists company_reviews_candidate_update on public.company_reviews;
+create policy company_reviews_candidate_update on public.company_reviews for update to authenticated using(candidate_id=(select auth.uid())) with check(candidate_id=(select auth.uid()));
+grant select on public.company_reviews to anon,authenticated;
+grant insert,update on public.company_reviews to authenticated;
+drop policy if exists applications_candidate_insert on public.applications;
+create policy applications_candidate_insert on public.applications for insert to authenticated with check(candidate_id=(select auth.uid()) and data_consent=true and data_consent_at is not null and data_consent_version='2026-11-15' and (select public.current_user_is_candidate()) and exists(select 1 from public.jobs j where j.id=applications.job_id and j.status='published'));
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+begin
+ insert into public.profiles(id,full_name,email,role,company_name,data_consent_at,data_consent_version)
+ values(new.id,coalesce(new.raw_user_meta_data->>'full_name',''),coalesce(new.email,''),case when new.raw_user_meta_data->>'role'='employer' then 'employer' else 'candidate' end,nullif(new.raw_user_meta_data->>'company_name',''),nullif(new.raw_user_meta_data->>'data_consent_at','')::timestamptz,nullif(new.raw_user_meta_data->>'data_consent_version',''));
+ return new;
+end;
+$$;
+revoke all on function public.handle_new_user() from public,anon,authenticated;
+create or replace function public.sync_company_public_profile()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+begin
+ if new.role in('employer','admin') then
+  insert into public.company_profiles(company_id,public_name,city) values(new.id,coalesce(nullif(new.company_name,''),nullif(new.full_name,''),'Empresa'),new.city)
+  on conflict(company_id) do update set public_name=excluded.public_name,city=excluded.city,updated_at=now();
+ end if;return new;
+end;
+$$;
+drop trigger if exists sync_company_public_profile on public.profiles;
+create trigger sync_company_public_profile after insert or update of company_name,city,role on public.profiles for each row execute procedure public.sync_company_public_profile();
+revoke all on function public.sync_company_public_profile() from public,anon,authenticated;
+insert into public.company_profiles(company_id,public_name,city) select id,coalesce(nullif(company_name,''),nullif(full_name,''),'Empresa'),city from public.profiles where role in('employer','admin') on conflict(company_id) do update set public_name=excluded.public_name,city=excluded.city;
