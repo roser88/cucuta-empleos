@@ -70,10 +70,9 @@ function showPrivacyGate(){ $("privacyGateCheck").checked=false; $("privacyGateM
 async function acceptPrivacyGate(){
   if(!currentUser){ $("privacyGateMessage").textContent="Tu sesión no está activa. Inicia sesión nuevamente."; return; }
   if(!$("privacyGateCheck").checked){ $("privacyGateMessage").textContent="Debes marcar la casilla para autorizar el tratamiento de datos y continuar."; return; }
-  const acceptedAt=new Date().toISOString();
-  const {error}=await db.from("profiles").update({data_consent_at:acceptedAt,data_consent_version:"2026-11-15"}).eq("id",currentUser.id);
-  if(error){ $("privacyGateMessage").textContent="No fue posible guardar tu autorización. Inténtalo nuevamente."; console.error(error); return; }
-  profile={...(profile||{}),data_consent_at:acceptedAt,data_consent_version:"2026-11-15"};
+  const {data,error}=await db.rpc("record_privacy_consent");
+  if(error||!data?.accepted){ $("privacyGateMessage").textContent="No fue posible guardar tu autorización: "+(error?.message||"respuesta no confirmada")+". Inténtalo nuevamente."; console.error("record_privacy_consent:",error||data); return; }
+  profile={...(profile||{}),data_consent_at:data.accepted_at,data_consent_version:"2026-11-15"};
   location.replace("dashboard.html");
 }
 function openPublish() {
