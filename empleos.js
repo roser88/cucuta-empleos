@@ -3,17 +3,17 @@ let rows=[];
 const esc=s=>String(s??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function render(){
  const q=document.getElementById("q").value.toLowerCase();
- const filtered=rows.filter(x=>(x.title+" "+x.company_name+" "+x.description).toLowerCase().includes(q));
+ const city=document.getElementById("cityFilter").value;const sort=document.getElementById("sortJobs").value;const filtered=rows.filter(x=>(!city||x.city===city)&&(x.title+" "+x.company_name+" "+x.description).toLowerCase().includes(q)).sort((a,b)=>sort==="oldest"?new Date(a.created_at)-new Date(b.created_at):new Date(b.created_at)-new Date(a.created_at));
  document.getElementById("jobs").innerHTML=filtered.length?filtered.map(j=>
   '<article class="candidate-row"><div><h3>'+esc(j.title)+'</h3><p>'+esc(j.is_confidential?"Empresa confidencial":j.company_name)+' · '+esc(j.city)+' · '+esc(j.work_mode||"Presencial")+'</p><p>'+esc((j.description||"").slice(0,220))+'</p></div><button class="primary-btn" data-apply="'+esc(j.id)+'">Postularme</button></article>'
  ).join(""):'<div class="empty">No hay vacantes que coincidan con tu búsqueda.</div>';
 }
-db.from("jobs").select("id,title,company_name,is_confidential,city,work_mode,description").eq("status","published").order("created_at",{ascending:false}).then(({data,error})=>{
+db.from("jobs").select("id,title,company_name,is_confidential,city,work_mode,description,created_at").eq("status","published").order("created_at",{ascending:false}).then(({data,error})=>{
  rows=data||[];
  document.getElementById("jobs").innerHTML=error?"No se pudieron cargar las vacantes.":"";
  render();
 });
-document.getElementById("q").addEventListener("input",render);
+document.getElementById("q").addEventListener("input",render);document.getElementById("sortJobs").addEventListener("change",render);document.getElementById("cityFilter").addEventListener("change",render);
 document.getElementById("jobs").addEventListener("click",async e=>{
  const b=e.target.closest("[data-apply]");if(!b)return;
  const {data:{user}}=await db.auth.getUser();
