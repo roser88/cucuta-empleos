@@ -16,6 +16,7 @@ Portal web de intermediación laboral para publicar vacantes, crear perfiles pro
 
 - Cuenta administrativa inicial asignada a la cuenta existente de Gabriel Andrés Roser Cortés (`gabrielroser@outlook.com`). El acceso requiere la contraseña ya conocida por el titular o restablecimiento de contraseña por Supabase; no existe una contraseña predeterminada ni se almacena una clave en el repositorio.
 - Panel de control para publicar/desactivar banners y logos, gestionar anuncios de portada, revisar reportes, moderar vacantes y eliminar opiniones.
+- El usuario administrador principal es la cuenta existente de Gabriel Andrés Roser Cortés (`gabrielroser@outlook.com`), promovida en Supabase al rol `admin`. Para establecer o cambiar la contraseña se utiliza el flujo de recuperación por correo.
 - Diagnóstico básico de conectividad y disponibilidad de tablas. La reparación de errores de código/infraestructura sigue requiriendo intervención técnica y despliegues controlados.
 - Archivos visuales en bucket público `site-assets` con escritura restringida a administradores.
 
@@ -121,7 +122,7 @@ Este repositorio contiene una base funcional en desarrollo para el proyecto acad
 
 ## Registro de cambios – 15 de noviembre de 2026
 
-- Se agregó panel administrador y cuenta inicial del administrador principal (Gabriel Andrés Roser Cortés), con control RLS en backend.
+- Se agregó panel administrador y cuenta inicial del administrador principal (Gabriel Andrés Roser Cortés, `gabrielroser@outlook.com`), con control RLS en backend; se habilitó el flujo de restablecimiento de contraseña.
 - Se habilitó gestión de banners/logos, anuncios, reportes de errores, moderación de vacantes y opiniones.
 - Se agregaron tablas y políticas de administrador, bucket de recursos visuales y diagnóstico básico.
 - Se completó la política con nombres y correos de contacto de los dos integrantes del proyecto; falta formalizar responsable legal y datos físicos no suministrados.
