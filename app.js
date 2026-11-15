@@ -56,6 +56,7 @@ function updateAuthUI() {
   $("logoutBtn").classList.toggle("hidden", !currentUser);
   if ($("profileBtn")) $("profileBtn").classList.toggle("hidden", !currentUser);
 }
+async function loadHomepagePromotions(){const host=$("homePromotions");if(!host||!db)return;const [b,a]=await Promise.all([db.from("site_banners").select("id,title,subtitle,image_url,target_url,sort_order").eq("is_active",true).eq("placement","home").order("sort_order"),db.from("site_announcements").select("id,title,body,kind").eq("is_active",true).order("created_at",{ascending:false}).limit(3)]);const banners=b.data||[],ann=a.data||[];host.innerHTML=ann.map(x=>'<article class="home-announcement '+escapeHTML(x.kind)+'"><b>'+escapeHTML(x.title)+'</b><p>'+escapeHTML(x.body)+'</p></article>').join("")+banners.map(x=>'<article class="home-banner">'+(x.image_url?'<img src="'+escapeHTML(x.image_url)+'" alt="'+escapeHTML(x.title)+'"> ':'')+'<div><h3>'+escapeHTML(x.title)+'</h3><p>'+escapeHTML(x.subtitle||"") +'</p>'+(x.target_url?'<a href="'+escapeHTML(x.target_url)+'" rel="noopener">Conocer más →</a>':'')+'</div></article>').join("");}
 async function loadJobs() {
   const list = $("jobsList");
   if (!db) {
@@ -294,7 +295,7 @@ $("year").textContent=new Date().getFullYear();
 async function init(){
   if(!db){updateAuthUI();await loadJobs();loadDashboard();return;}
   const {data:{session}}=await db.auth.getSession();
-  currentUser=session?.user||null;if(currentUser){location.replace("dashboard.html");return;}await loadProfile();updateAuthUI();await loadJobs();await loadDashboard();
+  currentUser=session?.user||null;if(currentUser){location.replace("dashboard.html");return;}await loadProfile();updateAuthUI();await loadJobs();await loadHomepagePromotions();await loadDashboard();
   db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;await loadProfile();updateAuthUI();loadDashboard();});
 }
 init();
