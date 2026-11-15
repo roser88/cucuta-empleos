@@ -264,7 +264,7 @@ $("authForm").addEventListener("submit",async e=>{
   }
 });
 $("switchAuth").addEventListener("click",()=>authDialog(authMode==="login"?"signup":"login"));
-$("forgotPassword")?.addEventListener("click",async()=>{const email=$("authEmail").value.trim();if(!email){$("authMessage").textContent="Escribe primero tu correo electrónico.";return;}const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});$("authMessage").textContent=error?error.message:"Si el correo está registrado, recibirás instrucciones para restablecer la contraseña.";});
+$("forgotPassword")?.addEventListener("click",async()=>{const email=$("authEmail").value.trim();if(!email){$("authMessage").textContent="Escribe primero tu correo electrónico.";return;}const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+"/reset-password.html"});$("authMessage").textContent=error?error.message:"Si el correo está registrado, recibirás instrucciones para restablecer la contraseña.";});
 $("accountRole").addEventListener("change",()=> $("companyField").classList.toggle("hidden",$("accountRole").value!=="employer"));
 $("jobForm").addEventListener("submit",async e=>{
   e.preventDefault();if(!db||!currentUser||!profile){$("jobMessage").textContent="Inicia sesión con tu cuenta de empresa.";return;}
