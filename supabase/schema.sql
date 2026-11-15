@@ -375,3 +375,21 @@ drop trigger if exists sync_company_public_profile on public.profiles;
 create trigger sync_company_public_profile after insert or update of company_name,city,role on public.profiles for each row execute procedure public.sync_company_public_profile();
 revoke all on function public.sync_company_public_profile() from public,anon,authenticated;
 insert into public.company_profiles(company_id,public_name,city) select id,coalesce(nullif(company_name,''),nullif(full_name,''),'Empresa'),city from public.profiles where role in('employer','admin') on conflict(company_id) do update set public_name=excluded.public_name,city=excluded.city;
+
+-- Refuerzo: la función de rol opera con permisos del usuario y la opinión no puede cambiar de autor/empresa.
+create or replace function public.current_user_is_candidate()
+returns boolean language sql stable security invoker set search_path=''
+as $$ select exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role='candidate'); $$;
+revoke all on function public.current_user_is_candidate() from public,anon;
+grant execute on function public.current_user_is_candidate() to authenticated;
+create or replace function public.prevent_company_review_identity_change()
+returns trigger language plpgsql set search_path=''
+as $$
+begin
+ if new.company_id is distinct from old.company_id or new.candidate_id is distinct from old.candidate_id then raise exception 'No se puede cambiar la empresa ni el autor de una opinión existente.'; end if;
+ return new;
+end;
+$$;
+drop trigger if exists prevent_company_review_identity_change on public.company_reviews;
+create trigger prevent_company_review_identity_change before update on public.company_reviews for each row execute procedure public.prevent_company_review_identity_change();
+revoke all on function public.prevent_company_review_identity_change() from public,anon,authenticated;
