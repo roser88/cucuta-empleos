@@ -13,3 +13,6 @@
 
 /* Navegación de privacidad y filtros */
 .privacy-consent{display:block!important;font-size:12px;line-height:1.65;color:var(--muted);margin:12px 0}.privacy-consent input{width:auto!important;display:inline-block;margin-right:7px}.privacy-consent a{color:var(--primary);font-weight:700;text-decoration:underline}.filters select#sortJobs{min-width:190px}.candidate-job-cta{display:flex;justify-content:flex-end;margin:0 0 16px}.welcome-home-link{display:inline-block;color:#bdefff;font-size:12px;font-weight:700;margin-bottom:12px}.job-filters{display:flex;gap:12px;flex-wrap:wrap}.job-filters select{padding:12px;border:1px solid #dce5ef;border-radius:9px;background:white}
+
+/* La regla de consentimiento no debe anular la clase hidden en el formulario de acceso. */
+.privacy-consent.hidden{display:none!important}
