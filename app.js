@@ -77,12 +77,27 @@ async function acceptPrivacyGate(){
   if(profile?.data_consent_at){ location.replace("dashboard.html"); return; }
   if(!currentUser){ $("privacyGateMessage").textContent="Tu sesión no está activa. Inicia sesión nuevamente."; return; }
   if(!$("privacyGateCheck").checked){ $("privacyGateMessage").textContent="Debes marcar la casilla para autorizar el tratamiento de datos y continuar."; return; }
-  privacyConsentSaving=true; $("privacyGateMessage").textContent="Guardando autorización..."; $("privacyGateModal").querySelector("button[type=submit]").disabled=true;
-  const {data,error}=await db.rpc("record_privacy_consent");
-  $("privacyGateModal").querySelector("button[type=submit]").disabled=false; privacyConsentSaving=false;
-  if(error||!data?.accepted){ $("privacyGateMessage").textContent="No fue posible guardar tu autorización: "+(error?.message||"respuesta no confirmada")+". Inténtalo nuevamente."; console.error("record_privacy_consent:",error||data); return; }
-  profile={...(profile||{}),data_consent_at:data.accepted_at,data_consent_version:"2026-11-15"};
-  location.replace("dashboard.html");
+  privacyConsentSaving=true;
+  const submit=$("privacyGateModal").querySelector("button[type=submit]");
+  submit.disabled=true;
+  $("privacyGateMessage").textContent="Guardando autorización...";
+  try{
+    const {data,error}=await db.rpc("record_privacy_consent");
+    if(error||!data?.accepted){
+      $("privacyGateMessage").textContent="No fue posible guardar tu autorización. "+(error?.message||"El servidor no confirmó el registro.")+" Puedes intentarlo de nuevo.";
+      console.error("record_privacy_consent:",error||data);
+      return;
+    }
+    profile={...(profile||{}),data_consent_at:data.accepted_at,data_consent_version:"2026-11-15"};
+    $("privacyGateMessage").textContent="Autorización guardada. Abriendo tu cuenta...";
+    location.replace("dashboard.html");
+  }catch(err){
+    console.error("Error al registrar autorización:",err);
+    $("privacyGateMessage").textContent="No se pudo conectar para guardar la autorización. Revisa tu conexión y vuelve a intentarlo.";
+  }finally{
+    privacyConsentSaving=false;
+    submit.disabled=false;
+  }
 }
 function openPublish() {
   if (!currentUser) { authDialog("login"); toast("Inicia sesión con una cuenta de empresa para publicar vacantes."); return; }
@@ -392,7 +407,20 @@ async function init(){
   if(!db){updateAuthUI();await loadJobs();loadDashboard();return;}
   const {data:{session}}=await db.auth.getSession();
   currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}await loadProfile();updateAuthUI();if(currentUser&&!profile?.data_consent_at){showPrivacyGate();}await loadJobs();await loadHomepagePromotions();await loadDashboard();
-  db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}else clearTimeout(idleTimer);await loadProfile();updateAuthUI();loadDashboard();});
+  // Supabase Auth: diferir las consultas fuera del callback para no bloquear el lock interno.
+  db.auth.onAuthStateChange((_event,session)=>{
+    currentUser=session?.user||null;
+    if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}
+    else clearTimeout(idleTimer);
+    setTimeout(async()=>{
+      try{
+        await loadProfile();
+        updateAuthUI();
+        if(currentUser&&!profile?.data_consent_at)showPrivacyGate();
+        await loadDashboard();
+      }catch(err){console.error("Error actualizando sesión:",err);}
+    },0);
+  });
 }
 init();
 if(new URLSearchParams(location.search).get("consent")==="required"){setTimeout(()=>authDialog("login"),0);}
