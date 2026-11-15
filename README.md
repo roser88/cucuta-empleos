@@ -120,5 +120,5 @@ Este repositorio contiene una base funcional en desarrollo para el proyecto acad
 - Se publicó una política de tratamiento de datos y se añadió autorización no premarcada en registro y postulación, con versión y fecha persistidas en Supabase.
 - Se añadieron perfiles públicos de empresas, calificaciones y comentarios de candidatos que hayan postulado.
 - Se crearon tablas `company_profiles` y `company_reviews` con RLS y políticas de acceso.
-- Se restringió la inserción de postulaciones para exigir consentimiento y se mantuvo el almacenamiento privado de hojas de vida.
+- Se restringió la inserción de postulaciones para exigir consentimiento y se protegió la evidencia de autorización contra modificaciones posteriores; se mantuvo el almacenamiento privado de hojas de vida.
 - Pendiente: completar datos de identificación/contacto del responsable legal, validar jurídicamente la política, configurar proveedor de correo, pruebas end-to-end y pruebas de penetración independientes.
