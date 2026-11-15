@@ -46,7 +46,7 @@ Portal web de intermediación laboral para publicar vacantes, crear perfiles pro
 - Panel del candidato para consultar sus postulaciones y la fecha en que una empresa visualizó su hoja de vida.
 
 ### Panel de empresas
-- Perfiles públicos de empresa y reseñas con calificación de 1 a 5 estrellas, limitadas a candidatos con postulaciones a esa empresa.
+- Perfiles públicos de empresa editables por cada empresa y reseñas con calificación de 1 a 5 estrellas, limitadas a candidatos con postulaciones a esa empresa.
 - Consulta de las personas postuladas a las vacantes propias.
 - Consulta de perfiles profesionales y hojas de vida de candidatos postulados.
 - Visualización del mensaje de presentación.
