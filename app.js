@@ -55,7 +55,11 @@ function authDialog(mode="login", role="candidate") {
   $("authTitle").textContent = mode === "login" ? "Iniciar sesión" : "Crear una cuenta";
   $("authSubtitle").textContent = mode === "login" ? "Ingresa con tu correo y contraseña." : "Regístrate para usar todas las funciones de la plataforma.";
   $("nameField").classList.toggle("hidden", mode === "login");
-  $("dataConsentLabel").classList.toggle("hidden", mode === "login");
+  const consentLabel = $("dataConsentLabel");
+  consentLabel.classList.toggle("hidden", mode === "login");
+  consentLabel.hidden = mode === "login";
+  consentLabel.style.display = mode === "login" ? "none" : "flex";
+  $("dataConsent").required = mode === "signup";
   if(mode==="signup") $("dataConsent").checked=false;
   $("roleField").classList.toggle("hidden", mode === "login");
   $("companyField").classList.toggle("hidden", mode === "login" || role !== "employer");
@@ -66,7 +70,7 @@ function authDialog(mode="login", role="candidate") {
   $("authMessage").textContent = "";
   showModal("authModal");
 }
-function showPrivacyGate(){ $("privacyGateCheck").checked=false; $("privacyGateMessage").textContent=""; hideModals(); showModal("privacyGateModal"); }
+function showPrivacyGate(){ hideModals(); $("dataConsentLabel").hidden=true; $("dataConsentLabel").style.display="none"; $("privacyGateCheck").checked=false; $("privacyGateMessage").textContent=""; showModal("privacyGateModal"); }
 async function acceptPrivacyGate(){
   if(!currentUser){ $("privacyGateMessage").textContent="Tu sesión no está activa. Inicia sesión nuevamente."; return; }
   if(!$("privacyGateCheck").checked){ $("privacyGateMessage").textContent="Debes marcar la casilla para autorizar el tratamiento de datos y continuar."; return; }
