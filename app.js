@@ -339,3 +339,5 @@ async function init(){
   db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}else clearTimeout(idleTimer);await loadProfile();updateAuthUI();loadDashboard();});
 }
 init();
+if(new URLSearchParams(location.search).get("consent")==="required"){setTimeout(()=>authDialog("login"),0);}
+
