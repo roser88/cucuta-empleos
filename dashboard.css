@@ -12,3 +12,6 @@
 
 /* Acceso claro a la página pública desde el panel de cualquier usuario */
 .welcome-home-link,.welcome-brand-link{display:inline-flex;align-items:center;gap:6px;color:#8ee8f0!important;font-weight:800;text-decoration:none;margin-bottom:10px}.welcome-home-link:hover,.welcome-brand-link:hover{text-decoration:underline}.welcome-mark-link{display:grid;place-items:center;text-decoration:none;cursor:pointer;transition:transform .18s,background .18s}.welcome-mark-link:hover{transform:rotate(0deg) scale(1.06);background:#ffffff18}.sidebar .brand{cursor:pointer}.sidebar .brand:hover{opacity:.82}.side-bottom a{color:var(--blue);font-weight:800}.side-bottom a:hover{text-decoration:underline}
+
+/* Jerarquía semántica consistente para los títulos principales de cada sección. */
+.section-intro h1{font:800 22px "Noto Sans";margin:0 0 6px;color:var(--ink)}
