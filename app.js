@@ -15,6 +15,33 @@ let profile = null;
 let authMode = "login";
 let jobsCache = [];
 
+
+// Cierre automático compartido entre la página pública y el panel: 10 min sin actividad.
+const IDLE_LIMIT_MS = 10 * 60 * 1000;
+const ACTIVITY_KEY = "ce_last_activity";
+let idleTimer = null;
+function recordActivity(){
+  if(!currentUser) return;
+  localStorage.setItem(ACTIVITY_KEY,String(Date.now()));
+  scheduleIdleCheck();
+}
+function scheduleIdleCheck(){
+  clearTimeout(idleTimer);
+  if(!currentUser) return;
+  const last=Number(localStorage.getItem(ACTIVITY_KEY)||Date.now());
+  idleTimer=setTimeout(async()=>{
+    const latest=Number(localStorage.getItem(ACTIVITY_KEY)||0);
+    if(Date.now()-latest>=IDLE_LIMIT_MS){
+      await db.auth.signOut();
+      currentUser=null;profile=null;updateAuthUI();
+      toast("Tu sesión se cerró por 10 minutos de inactividad. Inicia sesión nuevamente.");
+    }else scheduleIdleCheck();
+  },Math.max(0,IDLE_LIMIT_MS-(Date.now()-last))+150);
+}
+["pointerdown","keydown","touchstart","scroll","click"].forEach(evt=>window.addEventListener(evt,recordActivity,{passive:true}));
+window.addEventListener("storage",e=>{if(e.key===ACTIVITY_KEY)scheduleIdleCheck();});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)scheduleIdleCheck();});
+
 function toast(message) {
   $("toast").textContent = message;
   $("toast").classList.remove("hidden");
@@ -295,7 +322,7 @@ $("year").textContent=new Date().getFullYear();
 async function init(){
   if(!db){updateAuthUI();await loadJobs();loadDashboard();return;}
   const {data:{session}}=await db.auth.getSession();
-  currentUser=session?.user||null;if(currentUser){location.replace("dashboard.html");return;}await loadProfile();updateAuthUI();await loadJobs();await loadHomepagePromotions();await loadDashboard();
-  db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;await loadProfile();updateAuthUI();loadDashboard();});
+  currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}await loadProfile();updateAuthUI();await loadJobs();await loadHomepagePromotions();await loadDashboard();
+  db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}else clearTimeout(idleTimer);await loadProfile();updateAuthUI();loadDashboard();});
 }
 init();
