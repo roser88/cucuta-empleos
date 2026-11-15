@@ -470,3 +470,33 @@ create policy site_assets_public_read on storage.objects for select to anon,auth
 create policy site_assets_admin_insert on storage.objects for insert to authenticated with check(bucket_id='site-assets' and private.is_admin());
 create policy site_assets_admin_update on storage.objects for update to authenticated using(bucket_id='site-assets' and private.is_admin()) with check(bucket_id='site-assets' and private.is_admin());
 create policy site_assets_admin_delete on storage.objects for delete to authenticated using(bucket_id='site-assets' and private.is_admin());
+
+-- Panel de administración y rol inicial.
+-- La promoción inicial se ejecutó como migración de base de datos sobre la cuenta ya existente.
+create schema if not exists private;
+revoke all on schema private from public,anon,authenticated;
+grant usage on schema private to authenticated;
+create or replace function private.is_admin()
+returns boolean language sql stable security definer set search_path=''
+as $$ select exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role='admin'); $$;
+revoke all on function private.is_admin() from public,anon;
+grant execute on function private.is_admin() to authenticated;
+create table if not exists public.site_banners(id uuid primary key default gen_random_uuid(),title text not null,subtitle text,image_path text,image_url text,target_url text,placement text not null default 'home' check(placement in('home','companies','jobs')),is_active boolean not null default true,sort_order integer not null default 0,created_by uuid references public.profiles(id),created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+create table if not exists public.site_announcements(id uuid primary key default gen_random_uuid(),title text not null,body text not null,kind text not null default 'info' check(kind in('info','success','warning')),is_active boolean not null default true,starts_at timestamptz,ends_at timestamptz,created_by uuid references public.profiles(id),created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+create table if not exists public.site_error_reports(id uuid primary key default gen_random_uuid(),user_id uuid references public.profiles(id) on delete set null,page_url text,description text not null,status text not null default 'open' check(status in('open','investigating','resolved','ignored')),admin_notes text,created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+alter table public.site_banners enable row level security;alter table public.site_announcements enable row level security;alter table public.site_error_reports enable row level security;
+drop policy if exists site_banners_public_read on public.site_banners;create policy site_banners_public_read on public.site_banners for select to anon,authenticated using(is_active=true);
+drop policy if exists site_banners_admin_all on public.site_banners;create policy site_banners_admin_all on public.site_banners for all to authenticated using(private.is_admin()) with check(private.is_admin());
+drop policy if exists site_announcements_public_read on public.site_announcements;create policy site_announcements_public_read on public.site_announcements for select to anon,authenticated using(is_active=true and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>now()));
+drop policy if exists site_announcements_admin_all on public.site_announcements;create policy site_announcements_admin_all on public.site_announcements for all to authenticated using(private.is_admin()) with check(private.is_admin());
+drop policy if exists site_error_reports_user_insert on public.site_error_reports;create policy site_error_reports_user_insert on public.site_error_reports for insert to authenticated with check(user_id=(select auth.uid()));
+drop policy if exists site_error_reports_admin_all on public.site_error_reports;create policy site_error_reports_admin_all on public.site_error_reports for all to authenticated using(private.is_admin()) with check(private.is_admin());
+drop policy if exists profiles_admin_read on public.profiles;create policy profiles_admin_read on public.profiles for select to authenticated using(private.is_admin());
+drop policy if exists jobs_admin_all on public.jobs;create policy jobs_admin_all on public.jobs for all to authenticated using(private.is_admin()) with check(private.is_admin());
+drop policy if exists applications_admin_all on public.applications;create policy applications_admin_all on public.applications for all to authenticated using(private.is_admin()) with check(private.is_admin());
+drop policy if exists company_reviews_admin_all on public.company_reviews;create policy company_reviews_admin_all on public.company_reviews for all to authenticated using(private.is_admin()) with check(private.is_admin());
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('site-assets','site-assets',true,5242880,array['image/png','image/jpeg','image/webp']) on conflict(id) do update set public=true,file_size_limit=5242880,allowed_mime_types=array['image/png','image/jpeg','image/webp'];
+drop policy if exists site_assets_public_read on storage.objects;create policy site_assets_public_read on storage.objects for select to anon,authenticated using(bucket_id='site-assets');
+drop policy if exists site_assets_admin_insert on storage.objects;create policy site_assets_admin_insert on storage.objects for insert to authenticated with check(bucket_id='site-assets' and private.is_admin());
+drop policy if exists site_assets_admin_update on storage.objects;create policy site_assets_admin_update on storage.objects for update to authenticated using(bucket_id='site-assets' and private.is_admin()) with check(bucket_id='site-assets' and private.is_admin());
+drop policy if exists site_assets_admin_delete on storage.objects;create policy site_assets_admin_delete on storage.objects for delete to authenticated using(bucket_id='site-assets' and private.is_admin());
