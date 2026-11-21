@@ -34,6 +34,8 @@ function scheduleIdleCheck(){
     const latest=Number(localStorage.getItem(ACTIVITY_KEY)||0);
     if(Date.now()-latest>=IDLE_LIMIT_MS){
       await db.auth.signOut();
+      localStorage.removeItem(ACTIVITY_KEY);
+      clearTimeout(idleTimer);
       currentUser=null;profile=null;updateAuthUI();
       toast("Tu sesión se cerró por 10 minutos de inactividad. Inicia sesión nuevamente.");
     }else scheduleIdleCheck();
@@ -312,7 +314,7 @@ async function loadDashboard() {
 }
 
 $("privacyGateForm").addEventListener("submit",e=>{e.preventDefault();acceptPrivacyGate();});
-$("privacyGateDecline").addEventListener("click",async()=>{await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();hideModals();toast("No aceptaste la política. No se inició sesión.");});
+$("privacyGateDecline").addEventListener("click",async()=>{await db.auth.signOut();localStorage.removeItem(ACTIVITY_KEY);clearTimeout(idleTimer);currentUser=null;profile=null;updateAuthUI();hideModals();toast("No aceptaste la política. No se inició sesión.");});
 $("privacyGateModal").addEventListener("click",e=>{if(e.target===$("privacyGateModal"))e.stopPropagation();});
 $("authForm").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -333,6 +335,7 @@ $("authForm").addEventListener("submit",async e=>{
         return;
       }
       currentUser=data.user||null;
+      if(currentUser){localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}
       await loadProfile();
       updateAuthUI();
       if(!currentUser){$("authMessage").textContent="No se pudo establecer la sesión. Vuelve a intentarlo.";return;}
@@ -389,7 +392,7 @@ $("detailApply").addEventListener("click",()=>{const id=$("detailApply").dataset
 $("applicationForm").addEventListener("submit",saveApplication);
 $("loginBtn").addEventListener("click",()=>authDialog("login"));
 $("registerBtn").addEventListener("click",()=>authDialog("signup"));
-$("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();currentUser=null;profile=null;updateAuthUI();await loadDashboard();toast("Has cerrado sesión. Regresando al inicio...");window.scrollTo({top:0,behavior:"smooth"});setTimeout(()=>{location.href="index.html#inicio";},3000);});
+$("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();localStorage.removeItem(ACTIVITY_KEY);clearTimeout(idleTimer);currentUser=null;profile=null;updateAuthUI();await loadDashboard();toast("Has cerrado sesión. Regresando al inicio...");window.scrollTo({top:0,behavior:"smooth"});setTimeout(()=>{location.href="index.html#inicio";},3000);});
 $("heroPublish").addEventListener("click",()=>location.href="publicar.html");
 document.querySelectorAll("[data-register-role]").forEach(b=>b.addEventListener("click",()=>authDialog("signup",b.dataset.registerRole)));
 $("reloadJobs").addEventListener("click",loadJobs);
@@ -408,10 +411,17 @@ async function init(){
   const {data:{session}}=await db.auth.getSession();
   currentUser=session?.user||null;if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}await loadProfile();updateAuthUI();if(currentUser&&!profile?.data_consent_at){showPrivacyGate();}await loadJobs();await loadHomepagePromotions();await loadDashboard();
   // Supabase Auth: diferir las consultas fuera del callback para no bloquear el lock interno.
-  db.auth.onAuthStateChange((_event,session)=>{
+  db.auth.onAuthStateChange((event,session)=>{
     currentUser=session?.user||null;
-    if(currentUser){if(!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));scheduleIdleCheck();}
-    else clearTimeout(idleTimer);
+    if(currentUser){
+      // Una autenticación nueva debe iniciar un contador nuevo; no reutilizar
+      // la marca de actividad de una sesión anterior ya cerrada.
+      if(event==="SIGNED_IN"||!localStorage.getItem(ACTIVITY_KEY))localStorage.setItem(ACTIVITY_KEY,String(Date.now()));
+      scheduleIdleCheck();
+    }else{
+      clearTimeout(idleTimer);
+      localStorage.removeItem(ACTIVITY_KEY);
+    }
     setTimeout(async()=>{
       try{
         await loadProfile();
